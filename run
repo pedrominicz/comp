@@ -1,0 +1,33 @@
+#!/bin/sh
+
+set -e
+
+echo test 1
+python mcc.py <<EOF
+Hello, world!
+EOF
+
+echo test 2
+python mcc.py <<EOF
+Hello, /* comment */ world!
+EOF
+
+echo test 3
+python mcc.py <<EOF
+Hello, /* /* broken comment */ */ world!
+EOF
+
+echo test 4
+python mcc.py <<EOF
+Hello...
+
+world?
+EOF
+
+# case "$1" in
+#   *.c)    gcc "$1" && ./a.out && rm -f a.out;;
+#   *.hs)   exec ghci "$1";;
+#   *.ml)   exec rlwrap ocaml;;
+#   *.py)   exec python "$1";;
+#   *)      echo "cannot run '$1'";;
+# esac
