@@ -4,7 +4,7 @@ and inch = ref stdin
 type tok =
   | Op of string
   | ILit of int
-  | SLit of int * string
+  | SLit of int * bytes
   | Sym of int
 
 let bufferize f =
@@ -45,14 +45,14 @@ let addsym, symstr, symitr =
       f i symtab.(i)
     done)
 
-let glo = String.make 0x1000 '\x00'
+let glo = Bytes.make 0x1000 '\x00'
 and gpos = ref 0
 
 let base = 0x400000
 and textoff = 0xe8
 
 let next =
-  let s = String.create 100 in
+  let s = Bytes.create 100 in
 
   let getq () =
     match getch () with
@@ -65,10 +65,10 @@ let next =
     | _ -> false in
 
   let rec id n ch =
-    s.[n] <- ch;
+    Bytes.set s n ch;
     if isid (peekch ())
     then id (n+1) (getch ())
-    else Sym (addsym (String.sub s 0 (n+1))) in
+    else Sym (addsym (Bytes.to_string (Bytes.sub s 0 (n+1)))) in
 
   let rec ilit n =
     match peekch () with
@@ -80,9 +80,9 @@ let next =
     | '"' ->
       ignore (getch ());
       gpos := (e + 8) land -8;
-      SLit (b+textoff + base, String.sub glo b (e-b))
+      SLit (b+textoff + base, Bytes.sub glo b (e-b))
     | _ ->
-      glo.[e] <- getq ();
+      Bytes.set glo e (getq ());
       slit b (e+1) in
 
   let longops =
@@ -130,28 +130,28 @@ let nextis t =
   let nt = next () in
   unnext nt; t = nt
 
-let obuf = String.make 0x100000 '\x00'
+let obuf = Bytes.make 0x100000 '\x00'
 and opos = ref 0
 
 let rec out x =
   if x <> 0 then begin
     out (x/0x100);
-    obuf.[!opos] <- Char.chr (x land 0xff);
+    Bytes.set obuf !opos (Char.chr (x land 0xff));
     incr opos
   end
 
 let le n x =
   for i = 0 to n/8 - 1 do
     let byte = (x lsr (i*8)) land 0xff in
-    obuf.[!opos] <- Char.chr byte;
+    Bytes.set obuf !opos (Char.chr byte);
     incr opos
   done
 
 let get32 l =
-  Char.code obuf.[l] +
-  Char.code obuf.[l+1] * 0x100 +
-  Char.code obuf.[l+2] * 0x10000 +
-  Char.code obuf.[l+3] * 0x1000000
+  Char.code (Bytes.get obuf l) +
+  Char.code (Bytes.get obuf (l+1)) * 0x100 +
+  Char.code (Bytes.get obuf (l+2)) * 0x10000 +
+  Char.code (Bytes.get obuf (l+3)) * 0x1000000
 
 let rec patch rel loc n =
   assert (n < 0x100000000);
@@ -204,7 +204,7 @@ let lval = ref (Mov 0, Int)
 
 let patchlval () =
   match fst !lval with
-  | Mov n -> obuf.[!opos - n] <- '\x8d'
+  | Mov n -> Bytes.set obuf (!opos - n) '\x8d'
   | Del n -> opos := !opos - n
 
 let read = function
@@ -579,7 +579,7 @@ let rec top () =
   | _ -> failwith "[decl] or [fun] expected"
 
 let elfhdr =
-  String.concat ""
+  Bytes.of_string (String.concat ""
   [ "\x7fELF\x02\x01\x01\x00";  (* e_ident, 64bits, little endian *)
     "\x00\x00\x00\x00\x00\x00\x00\x00";
     "\x02\x00";                 (* e_type, ET_EXEC      *)
@@ -595,7 +595,7 @@ let elfhdr =
     "\x40\x00";                 (* e_shentsize          *)
     "\x00\x00";                 (* e_shnum              *)
     "\x00\x00";                 (* e_shstrndx           *)
-  ]
+  ])
 
 let elfphdr ty off sz align =
   le 32 ty;                     (* p_type               *)
@@ -688,25 +688,25 @@ let elfgen outf =
     0; (* 0; *)                 (* DT_NULL              *)
   ];
   let tend = !opos in
-  String.blit obuf 0 obuf off tend;
-  String.blit glo 0 obuf textoff !gpos;
-  String.blit elfhdr 0 obuf 0 64;
+  Bytes.blit obuf 0 obuf off tend;
+  Bytes.blit glo 0 obuf textoff !gpos;
+  Bytes.blit elfhdr 0 obuf 0 64;
   opos := 64;
   elfphdr 3 (strtab+1+off) 28 1; (* PT_INTERP           *)
   elfphdr 1 0 (tend+off) 0x200000; (* PT_LOAD           *)
   elfphdr 2 (dyn+off) (tend-dyn) 8; (* PT_DYNAMIC       *)
   assert (!opos = textoff);
   patch false 24 (va entry);
-  output_string outf (String.sub obuf 0 (tend+off))
+  output_string outf (Bytes.to_string (Bytes.sub obuf 0 (tend+off)))
 
 let main () =
   let doone c stk =
     opos := 0; c stk;
-    print_string (String.sub obuf 0 !opos) in
+    print_string (Bytes.to_string (Bytes.sub obuf 0 !opos)) in
   let ppsym = function
     | Op s -> Printf.printf "Operator '%s'\n" s
     | ILit i -> Printf.printf "Int literal %d\n" i
-    | SLit (_, s) -> Printf.printf "Str literal %S\n" s
+    | SLit (_, s) -> Printf.printf "Str literal %S\n" (Bytes.to_string s)
     | Sym i -> Printf.printf "Symbol '%s' (%d)\n" (symstr i) i in
   let rec pptoks () =
     match next () with
