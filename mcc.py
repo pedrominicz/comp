@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import string
 import sys
 
 # Read all standard input.
-input = sys.stdin.read()
+input = sys.stdin.buffer.read().decode('ascii')
 input_pos = 0
 input_len = len(input)
 
@@ -31,9 +30,32 @@ def skip():
         # Skip whitespace.
         input_pos += 1
 
+strings_len = 4096
+strings = bytearray(strings_len)
+strings_pos = 0
+
+def add_string(string):
+    global strings_pos
+    string = string.encode('ascii')
+    string_pos = strings_pos
+    strings[strings_pos:strings_pos + len(string)] = string
+    strings_pos += len(string)
+    # Wasteful if `strings_pos % 8 == 0`.
+    strings_pos = strings_pos + 8 - strings_pos % 8
+    return string_pos
+
+identifiers = ['int', 'char', 'return', 'if', 'else', 'while', 'for', 'break']
+
+def add_identifier(identifier):
+    if identifier not in identifiers:
+        identifiers.append(identifier)
+    return identifiers.index(identifier)
+
 # Get next token. A token is a tuple where the first entry is its type and the
 # following entries the data. A token may be an integer literal, string
 # literal, identifier, or operator.
+#
+# Note: this function also adds string literals to `strings`.
 def next_token():
     global input_pos
     skip()
@@ -55,7 +77,7 @@ def next_token():
             input_pos += 1
         string = input[start_pos:input_pos]
         input_pos += 1
-        return ('string', string)
+        return ('string', string, add_string(string))
     # Character literal (results in integer literal).
     if input[input_pos] == "'":
         input_pos += 1
@@ -76,7 +98,8 @@ def next_token():
         start_pos = input_pos
         while input[input_pos] in identifier:
             input_pos += 1
-        return ('identifier', input[start_pos:input_pos])
+        identifier = input[start_pos:input_pos]
+        return ('identifier', identifier, add_identifier(identifier))
     # Operator.
     operators = ['++', '--', '&&', '||', '==', '<=', '>=', '!=', '>>', '<<']
     if input[input_pos:input_pos + 2] in operators:
@@ -95,3 +118,4 @@ try:
 except:
     sys.stdout.write(str(input_pos) + '\n')
     sys.stdout.flush()
+    raise
