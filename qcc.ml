@@ -204,15 +204,22 @@ let lval = ref (Mov 0, Int)
 
 let patchlval () =
   match fst !lval with
-  | Mov n -> Bytes.set obuf (!opos - n) '\x8d'
-  | Del n -> opos := !opos - n
+  | Mov n ->
+    let old = Bytes.get obuf (!opos - n) in
+    Printf.eprintf "patchval (%08X, Mov %d, %02X)\n" !opos n (Char.code old);
+    Bytes.set obuf (!opos - n) '\x8d'
+  | Del n ->
+    Printf.eprintf "patchval (%08X, Del %d)\n" !opos n;
+    opos := !opos - n
 
 let read = function
   | Int ->
     out 0x488b; le 8 0;
+    Printf.eprintf "read (%08X, Del 3, Int)\n" !opos;
     lval := (Del 3, Int)
   | Chr ->
     out 0x480fb6; le 8 0;
+    Printf.eprintf "read (%08X, Del 4, Chr)\n" !opos;
     lval := (Del 4, Chr)
 
 type globref = { loc : int; va : int }
@@ -295,6 +302,7 @@ and unary stk =
       assert (l > -256);
       out (0x488b45);
       out (l land 255);         (* mov l(%rbp), %rax    *)
+      Printf.eprintf "unary (%08X, Mov 3, Int)\n" !opos;
       lval := (Mov 3, Int))
     else (
       out 0x48b8;
@@ -621,6 +629,7 @@ let elfgen outf =
   load 0 0x3c;
   out 0x0f05;                   (* syscall              *)
   let off = textoff + !gpos in
+  Printf.eprintf "offset %d\n" off;
   let itr f =
     symitr (fun i s ->
       let g = globs.(i) in

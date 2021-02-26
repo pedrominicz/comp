@@ -195,3 +195,8 @@ write(0x4831c8, 3)
 # `|`
 write(0x4809c8, 3)
 noop()
+
+write(0x488b45f8, 4)
+write(0x488d45f8, 4)
+write(0x488b3c24, 4)
+write(0x488d3c24, 4)
