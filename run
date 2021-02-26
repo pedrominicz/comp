@@ -2,7 +2,14 @@
 
 set -e
 
-python test_asm.py |ndisasm -b64 -
+ocamlc qcc.ml
+rm -f qcc.cmi qcc.cmo
+
+./a.out test_patchlval.c
+chmod +x out
+./out
+
+tail -c +241 out |ndisasm -b64 -
 
 exit
 
