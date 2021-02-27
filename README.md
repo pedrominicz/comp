@@ -7,3 +7,5 @@ The first 131 lines are a simple tokenizer. Functionality is mimicked in the fir
 ### Resources
 
 [QCC - A Quick C Compiler](https://c9x.me/qcc/)
+
+[Shunting yard algorithm](https://en.wikipedia.org/wiki/Shunting-yard_algorithm)
