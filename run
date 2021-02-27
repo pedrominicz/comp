@@ -2,14 +2,20 @@
 
 set -e
 
-ocamlc qcc.ml
-rm -f qcc.cmi qcc.cmo
+#python test_asm.py |ndisasm -b64 -
 
-./a.out test_patchlval.c
-chmod +x out
-./out
+python test_rpn.py |gcc -x assembler -nostartfiles - -o test_rpn
+./test_rpn
+rm -f test_rpn
 
-tail -c +241 out |ndisasm -b64 -
+#ocamlc qcc.ml
+#rm -f qcc.cmi qcc.cmo
+#
+#./a.out -blk <<EOF |ndisasm -b64 -
+#  int x = 3 / 4;
+#  return 0;
+#}
+#EOF
 
 exit
 
