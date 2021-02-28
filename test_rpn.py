@@ -71,6 +71,7 @@ for instruction in convert(read(input())):
 
 print('        lea fmt(%rip), %rdi')
 print('        pop %rsi')
+print('        mov %rsi, %rdx')
 print('        xor %eax, %eax')
 print('        call printf')
 print('')
@@ -80,4 +81,4 @@ print('        syscall')
 print('')
 print('.data')
 print('fmt:')
-print('        .asciz "%lld\\n"')
+print('        .asciz "%lld\\n0x%016llx\\n"')

@@ -2,27 +2,23 @@
 
 set -e
 
+python mcc.py
+
+#gcc -O0 -Dint='long long int' test_gcc.c -o test_gcc
+#./test_gcc
+#rm test_gcc
+
 #python test_asm.py |ndisasm -b64 -
 
-python test_rpn.py |gcc -x assembler -nostartfiles - -o test_rpn
-./test_rpn
-rm -f test_rpn
+#python test_rpn.py |gcc -x assembler -nostartfiles - -o test_rpn
+#./test_rpn
+#rm test_rpn
 
 #ocamlc qcc.ml
-#rm -f qcc.cmi qcc.cmo
+#rm qcc.cmi qcc.cmo
 #
 #./a.out -blk <<EOF |ndisasm -b64 -
 #  int x = 3 / 4;
 #  return 0;
 #}
 #EOF
-
-exit
-
-case "$1" in
-  *.c)    ./a.out "$1" && chmod +x out && ./out;;
-  *.hs)   exec ghci "$1";;
-  *.ml)   exec rlwrap ocaml;;
-  *.py)   exec python mcc.py </dev/null;;
-  *)      echo "cannot run '$1'";;
-esac
