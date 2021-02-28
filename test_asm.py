@@ -200,3 +200,7 @@ write(0x488b45f8, 4)
 write(0x488d45f8, 4)
 write(0x488b3c24, 4)
 write(0x488d3c24, 4)
+noop()
+
+write(0x4883ec00, 4)
+write(0xe900000000, 5)

@@ -44,7 +44,7 @@ def add_string(string):
     strings_pos = strings_pos + 8 - strings_pos % 8
     return string_pos
 
-identifiers = ['int', 'char', 'return', 'if', 'else', 'while', 'for', 'break']
+identifiers = ['int', 'return', 'if', 'else', 'while']
 
 def add_identifier(identifier):
     if identifier not in identifiers:
@@ -78,20 +78,6 @@ def next_token():
         string = input[start_pos:input_pos]
         input_pos += 1
         return ('string', string, add_string(string))
-    # Character literal (results in integer literal).
-    if input[input_pos] == "'":
-        input_pos += 1
-        # Throws on end of input.
-        char = input[input_pos]
-        input_pos += 1
-        # Only '\n' supported.
-        if char == '\\':
-            char = '\n'
-            assert input[input_pos] == 'n'
-            input_pos += 1
-        assert input[input_pos] == "'"
-        input_pos += 1
-        return ('integer', ord(char))
     # Identifier.
     identifier = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
     if input[input_pos] in identifier:
@@ -101,7 +87,7 @@ def next_token():
         identifier = input[start_pos:input_pos]
         return ('identifier', identifier, add_identifier(identifier))
     # Operator.
-    operators = ['++', '--', '&&', '||', '==', '<=', '>=', '!=', '>>', '<<']
+    operators = ['==', '<=', '>=', '!=', '>>', '<<']
     if input[input_pos:input_pos + 2] in operators:
         start_pos = input_pos
         input_pos += 2
@@ -110,12 +96,3 @@ def next_token():
     operator = input[input_pos]
     input_pos += 1
     return ('operator', operator)
-
-try:
-    while token := next_token():
-        sys.stdout.write(str(token) + '\n')
-        sys.stdout.flush()
-except:
-    sys.stdout.write(str(input_pos) + '\n')
-    sys.stdout.flush()
-    raise
