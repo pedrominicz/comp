@@ -52,32 +52,31 @@ def add_identifier(identifier):
     return identifiers.index(identifier)
 
 # Get next token. A token is a tuple where the first entry is its type and the
-# following entries the data. A token may be an integer literal, string
-# literal, identifier, or operator.
+# following entries the data. A token may be an integer literal, identifier, or
+# operator.
 #
-# Note: this function also adds string literals to `strings`.
+# Note: strings are added to `strings` and return an integer literal (pointer).
 def next_token():
     global input_pos
     skip()
     # End of input.
     if input_pos == input_len:
         return ()
-    # Integer literal.
+    # Integer.
     if input[input_pos] in '0123456789':
         start_pos = input_pos
         while input[input_pos] in '0123456789':
             input_pos += 1
         return ('integer', int(input[start_pos:input_pos]))
-    # String literal.
+    # String.
     if input[input_pos] == '"':
         input_pos += 1
         start_pos = input_pos
         # Throws on end of input.
         while input[input_pos] != '"':
             input_pos += 1
-        string = input[start_pos:input_pos]
         input_pos += 1
-        return ('string', string, add_string(string))
+        return ('integer', add_string(input[start_pos:input_pos]))
     # Identifier.
     identifier = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
     if input[input_pos] in identifier:
@@ -87,7 +86,7 @@ def next_token():
         identifier = input[start_pos:input_pos]
         return ('identifier', identifier, add_identifier(identifier))
     # Operator.
-    operators = ['==', '<=', '>=', '!=', '>>', '<<']
+    operators = ['<<', '>>', '<=', '>=', '==', '!=']
     if input[input_pos:input_pos + 2] in operators:
         start_pos = input_pos
         input_pos += 2
@@ -96,3 +95,61 @@ def next_token():
     operator = input[input_pos]
     input_pos += 1
     return ('operator', operator)
+
+# TODO:
+# - Left associative binary operators (ordered by precedence):
+#   - `*`, `/`, and `%`
+#   - `+` and `-`
+#   - `<<` and `>>`
+#   - `<`, `<=`, `>`, and `>=`
+#   - `==` and `!=`
+#   - `&`
+#   - `^`
+#   - `|`
+# - Right associative binary operators (ordered by precedence):
+#   - `=`
+
+operators = [
+    '*', '/', '%', '+', '-', '<<', '>>',
+    '<', '<=', '>', '>=', '==', '!=', '&', '^', '|', '&&', '||', '='
+]
+
+precedence = {
+    # Left associative binary operators.
+    '*': 10, '/': 10, '%': 10,
+    '+': 9, '-': 9,
+    '<<': 8, '>>': 8,
+    '<': 7, '<=': 7, '>': 7, '>=': 7,
+    '==': 6, '!=': 6,
+    '&': 5,
+    '^': 4,
+    '|': 3,
+    # Right associative binary operators.
+    '=': 0
+}
+
+postfix = []
+stack = []
+while token := next_token():
+    if token[0] == 'integer' or token[0] == 'identifier':
+        postfix.append(token)
+    else:
+        assert token[0] == 'operator' and token[1] in operators
+        if token == '(':
+            stack.append(token)
+        elif token == ')':
+            while stack[-1] != '(':
+                postfix.append(stack.pop())
+            # Discard '('.
+            stack.pop()
+        else:
+            while (stack and stack[-1][1] != '(' and
+                    # Right associative binary operators.
+                    (precedence[stack[-1][1]] > precedence[token[1]] or
+                    # Left associative binary operators.
+                    precedence[token[1]] > 2 and precedence[stack[-1][1]] >= precedence[token[1]])):
+                postfix.append(stack.pop())
+            stack.append(token)
+postfix.extend(stack[::-1])
+
+print([token[1] for token in postfix])

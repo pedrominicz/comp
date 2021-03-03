@@ -53,8 +53,7 @@ noop()
 #   0000005D  90                nop
 for i in [2, 3, 10, 11, 12, 13]:
     write(0x4839c1, 3)
-    # Clear `eax` (`mov eax,0` on `qcc.ml`).
-    write(0x33c0, 2)
+    write(0xb800000000, 5)
     write(0x0f92c0 + (i << 8), 3)
 noop()
 
@@ -155,13 +154,6 @@ write(0x488b00, 3)
 write(0x480fb600, 4)
 noop()
 
-#   00000129  480FAFC1          imul rax,rcx
-#   0000012D  4891              xchg rax,rcx
-#   0000012F  4899              cqo
-#   00000131  48F7F9            idiv rcx
-#   00000134  4891              xchg rax,rcx
-#   00000136  4899              cqo
-#   00000138  48F7F9            idiv rcx
 #   0000013B  4892              xchg rax,rdx
 #   0000013D  4801C8            add rax,rcx
 #   00000140  4891              xchg rax,rcx
@@ -175,10 +167,17 @@ noop()
 #   00000155  4809C8            or rax,rcx
 #   00000158  90                nop
 # `*`
+#   00000129  480FAFC1          imul rax,rcx
 write(0x480fafc1, 4)
 # `/`
+#   0000012D  4891              xchg rax,rcx
+#   0000012F  4899              cqo
+#   00000131  48F7F9            idiv rcx
 write(0x4891489948f7f9, 7)
 # `%`
+#   00000134  4891              xchg rax,rcx
+#   00000136  4899              cqo
+#   00000138  48F7F9            idiv rcx
 write(0x4891489948f7f94892, 9)
 # `+`
 write(0x4801c8, 3)
@@ -204,3 +203,14 @@ noop()
 
 write(0x4883ec00, 4)
 write(0xe900000000, 5)
+noop()
+
+write(0x4839c1, 3)
+write(0x0f92c0 + (10 << 8), 3)
+noop()
+
+write(0x48f7d8, 3)
+write(0x48f7d0, 3)
+write(0x4885c0, 3)
+write(0xb800000000, 5)
+write(0x0f94c0, 3)
