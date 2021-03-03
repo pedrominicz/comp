@@ -2,6 +2,15 @@
 
 set -e
 
+gcc -nostartfiles -nostdlib -no-pie hi.S -o hi
+./hi
+objdump -d hi
+rm hi
+
+#python test_elf.py
+#./test.sh
+#rm test.sh
+
 #python mcc.py
 
 #gcc -O0 -Dint='long long int' test_gcc.c -o test_gcc
@@ -10,10 +19,10 @@ set -e
 
 #python test_asm.py |ndisasm -b64 -
 
-python test_rpn.py |gcc -x assembler -nostartfiles -no-pie - -o test_rpn
-#objdump -d test_rpn
-./test_rpn
-rm test_rpn
+#python test_rpn.py |gcc -x assembler -nostartfiles -no-pie - -o test_rpn
+##objdump -d test_rpn
+#./test_rpn
+#rm test_rpn
 
 #ocamlc qcc.ml
 #rm qcc.cmi qcc.cmo
