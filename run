@@ -2,7 +2,7 @@
 
 set -e
 
-python mcc.py
+#python mcc.py
 
 #gcc -O0 -Dint='long long int' test_gcc.c -o test_gcc
 #./test_gcc
@@ -10,15 +10,27 @@ python mcc.py
 
 #python test_asm.py |ndisasm -b64 -
 
-#python test_rpn.py |gcc -x assembler -nostartfiles - -o test_rpn
-#./test_rpn
-#rm test_rpn
+python test_rpn.py |gcc -x assembler -nostartfiles -no-pie - -o test_rpn
+#objdump -d test_rpn
+./test_rpn
+rm test_rpn
 
 #ocamlc qcc.ml
 #rm qcc.cmi qcc.cmo
-#
-#./a.out -blk <<EOF |ndisasm -b64 -
-#  int x = 3 / 4;
+#cat <<EOF >source.c
+#main() {
+#  puts("Hello, world!");
 #  return 0;
+#}
+#EOF
+#./a.out source.c
+#rm source.c
+#chmod +x out
+#./out
+
+#ocamlc qcc.ml
+#rm qcc.cmi qcc.cmo
+#./a.out -blk <<EOF |ndisasm -b64 -
+#  puts("Hello, world!");
 #}
 #EOF

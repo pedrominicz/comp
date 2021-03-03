@@ -564,6 +564,7 @@ let rec top () =
       | Sym i ->
         let r = List.hd regs in
         push r;
+        out 0x90;
         if nextis (Op ",") then
           ignore (next ());
         let stk' = (i, -n*8) :: stk in
