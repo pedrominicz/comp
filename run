@@ -2,16 +2,12 @@
 
 set -e
 
-gcc -nostartfiles -nostdlib -nodefaultlibs -no-pie hi.S -o hi
+gcc -nostartfiles -no-pie hi.S -o hi
 python test_elf.py
 file test
 file hi
 
 #python mcc.py
-
-#gcc -O0 -Dint='long long int' test_gcc.c -o test_gcc
-#./test_gcc
-#rm test_gcc
 
 #python test_asm.py |ndisasm -b64 -
 
@@ -19,23 +15,3 @@ file hi
 ##objdump -d test_rpn
 #./test_rpn
 #rm test_rpn
-
-#ocamlc qcc.ml
-#rm qcc.cmi qcc.cmo
-#cat <<EOF >source.c
-#main() {
-#  puts("Hello, world!");
-#  return 0;
-#}
-#EOF
-#./a.out source.c
-#rm source.c
-#chmod +x out
-#./out
-
-#ocamlc qcc.ml
-#rm qcc.cmi qcc.cmo
-#./a.out -blk <<EOF |ndisasm -b64 -
-#  puts("Hello, world!");
-#}
-#EOF
