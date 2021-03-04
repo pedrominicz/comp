@@ -630,7 +630,7 @@ let elfgen outf =
   load 0 0x3c;
   out 0x0f05;                   (* syscall              *)
   let off = textoff + !gpos in
-  Printf.eprintf "offset %d\n" off;
+  Printf.eprintf "off %d\n" off;
   let itr f =
     symitr (fun i s ->
       let g = globs.(i) in
@@ -645,6 +645,7 @@ let elfgen outf =
       patch false g.loc g.va in
   symitr patchloc;
   let strtab = !opos in
+  Printf.eprintf "strtab\t0x%08x (%d)\n" (strtab + off) strtab;
   incr opos;                    (* initial 0            *)
   let dl = "/lib64/ld-linux-x86-64.so.2\x00libc.so.6"
   and dllen = 27+1+9 in
@@ -656,6 +657,7 @@ let elfgen outf =
   opos := (!opos + 7) land -8;
   let symtab = !opos
   and n = ref (dllen+2) in
+  Printf.eprintf "symtab\t0x%08x (%d)\n" (symtab + off) symtab;
   opos := !opos + 24;           (* first is reserved    *)
   itr (fun _ sl _ ->
     le 32 !n;                   (* st_name              *)
@@ -665,6 +667,7 @@ let elfgen outf =
     n := !n + sl+1);
   let rel = !opos
   and n = ref 1 in
+  Printf.eprintf "rel\t0x%08x (%d)\n" (rel + off) rel;
   itr (fun _ _ l ->
     let rec genrel l =
       if l <> 0 then begin
@@ -676,6 +679,7 @@ let elfgen outf =
     genrel l;
     incr n);
   let hash = !opos in
+  Printf.eprintf "hash\t0x%08x (%d)\n" (hash + off) hash;
   let n = (rel-symtab)/24 - 1 in
   le 32 1;                      (* nbucket              *)
   le 32 (n+1);                  (* nchain               *)
@@ -685,6 +689,7 @@ let elfgen outf =
   done;
   le 32 0;
   let dyn = !opos in
+  Printf.eprintf "dyn\t0x%08x (%d)\n" (dyn + off) dyn;
   List.iter (le 64) [
     1; 29;                      (* DT_NEEDED libc.so.6  *)
     4; (va hash);               (* DT_HASH              *)
@@ -698,6 +703,7 @@ let elfgen outf =
     0; (* 0; *)                 (* DT_NULL              *)
   ];
   let tend = !opos in
+  Printf.eprintf "tend\t0x%08x (%d)\n" (tend + off) tend;
   Bytes.blit obuf 0 obuf off tend;
   Bytes.blit glo 0 obuf textoff !gpos;
   Bytes.blit elfhdr 0 obuf 0 64;

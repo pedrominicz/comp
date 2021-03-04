@@ -131,3 +131,9 @@ http://wcipeg.com/wiki/Shunting_yard_algorithm#Unary_operators
 http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf
 
 https://www.lysator.liu.se/c/ANSI-C-grammar-y.html
+
+https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+
+https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html
+
+https://refspecs.linuxfoundation.org/elf/gabi4+/ch5.pheader.html
