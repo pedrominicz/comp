@@ -2,14 +2,10 @@
 
 set -e
 
-gcc -nostartfiles -nostdlib -no-pie hi.S -o hi
-./hi
-objdump -d hi
-rm hi
-
-#python test_elf.py
-#./test.sh
-#rm test.sh
+gcc -nostartfiles -nostdlib -nodefaultlibs -no-pie hi.S -o hi
+python test_elf.py
+file test
+file hi
 
 #python mcc.py
 
