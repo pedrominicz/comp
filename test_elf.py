@@ -4,6 +4,17 @@ import os
 import stat
 import sys
 
+#
+# What we need to make a dynamically linked ELF file:
+# - ELF header.
+# - Three program segments: one with the name of the interpreter, one with
+#   executable instructions, and one with dynamic linking information.
+# - String table (will contain the interpreter's path, library names, and
+#   dynamically linked symbol names).
+# - Symbol table.
+# - Relocation table.
+#
+
 def make_header():
     return (
         # ELF magic number.
@@ -43,7 +54,7 @@ def make_header():
         # Size of a program header table entry.
         b'\x38\x00'
         # Number of entries in the program header table.
-        b'\x01\x00'
+        b'\x02\x00'
         # Size of a section header table entry.
         b'\x00\x00'
         # Number of entries in the section header table.
@@ -54,13 +65,13 @@ def make_header():
 
 # Make 64-bit program header. Note that 32-bit program headers have different
 # member order.
-def make_program_header(offset, size):
+def make_program_header(segment_type, offset, size):
+    segment_type = ['load', 'dynamic', 'interpreter'].index(segment_type) + 1
     return (
         # Segment type.
-        b'\x01\x00\x00\x00' # Loadable segment.
-        # Flags (`0x00000005` and `0x00000006` signify read and execute and
-        # write and execute respectively).
-        b'\x05\x00\x00\x00' # Read and execute.
+        segment_type.to_bytes(4, 'little') +
+        # Flags.
+        b'\x07\x00\x00\x00' # Read, write, and execute.
         # Offset of segment in file.
         + offset.to_bytes(8, 'little')
         # Virtual address of the segment in memory.
@@ -74,28 +85,86 @@ def make_program_header(offset, size):
         # Alignment in file and memory.
         + (4096).to_bytes(8, 'little'))
 
+string_table = (
+    # First byte must be null.
+    b'\x00'
+    b'/lib64/ld-linux-x86-64.so.2\x00'
+    b'libc.so.6\x00'
+    b'puts\x00')
+
+symbol_table = (
+    # Undefined symbol.
+    b'\x00\x00\x00\x00\x00\x00\x00\x00'
+    b'\x00\x00\x00\x00\x00\x00\x00\x00'
+    b'\x00\x00\x00\x00\x00\x00\x00\x00'
+    # `puts`
+    # Symbol name offset (on string table).
+    + (39).to_bytes(4, 'little') +
+    # Global, untyped symbol
+    # (see `https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.symtab.html).
+    b'\x10\x00\x00\x00'
+    # Symbol value.
+    b'\x00\x00\x00\x00\x00\x00\x00\x00'
+    # Symbol size.
+    b'\x00\x00\x00\x00\x00\x00\x00\x00')
+
+relocation_table = (
+    # Virtual address to apply the relocation at.
+    b'\x09\x10\x40\x00\x00\x00\x00\x00'
+    # Relocation type.
+    b'\x01\x00\x00\x00'
+    # Symbol table index.
+    b'\x01\x00\x00\x00'
+    # Addend used to compute the value to be stored into the relocatable field.
+    b'\x00\x00\x00\x00\x00\x00\x00\x00')
+
+# In ELF lingo, the segments contain information needed at runtime, while the
+# sections contain information needed during linking.
+dynamic_section = (
+    # Needed library (`libc.so.6`) name at offset 29 on string table.
+    (1).to_bytes(8, 'little') + (29).to_bytes(8, 'little') +
+    # Virtual address of string table.
+    (5).to_bytes(8, 'little') +
+    (0x400000 + 232).to_bytes(8, 'little') +
+    # Symbol table address.
+    (6).to_bytes(8, 'little') +
+    (0x400000 + 232 + len(string_table)).to_bytes(8, 'little') +
+    # Relocation table address.
+    (7).to_bytes(8, 'little') +
+    (0x400000 + 232 + len(string_table) + len(symbol_table)).to_bytes(8, 'little') +
+    # Size (in bytes) of relocation table.
+    (8).to_bytes(8, 'little') +
+    (len(relocation_table)).to_bytes(8, 'little') +
+    # Size (in bytes) of relocation table entries.
+    (9).to_bytes(8, 'little') + (24).to_bytes(8, 'little'))
+
 payload = (
-    # `mov $1, %eax`
-    b'\xb8\x01\x00\x00\x00'
-    # `mov $1, %edi`
-    b'\xbf\x01\x00\x00\x00'
-    # `mov $msg, %esi`
-    b'\xbe\x1f\x10\x40\x00'
-    # `mov $4, %edx`
-    b'\xba\x04\x00\x00\x00'
-    # `syscall`
-    b'\x0f\x05'
+    # `lea msg(%eip), %edi`
+    b'\x67\x8d\x3d\x15\x00\x00\x00'
+    # `mov $puts, %rax`
+    b'\x48\xb8\x00\x00\x00\x00\x00\x00\x00\x00'
+    # `call *%rax`
+    b'ff\xd0'
     # `mov $60, %eax`
     b'\xb8\x3c\x00\x00\x00'
     # `xor %edi, %edi`
     b'\x31\xff'
     # `syscall`
     b'\x0f\x05'
-    b'Hi.\n\x00')
+    # `msg:`
+    b'Hi.\x00')
 
 with open('test', 'wb') as f:
     f.write(make_header())
-    f.write(make_program_header(4096, len(payload)))
+    # Points to the first nonempty string at the string table.
+    f.write(make_program_header('interpreter', 233, 28))
+    f.write(make_program_header('load', 4096, len(payload)))
+    f.write(make_program_header('dynamic',
+        232 + len(string_table), len(dynamic_section)))
+    f.write(string_table)
+    f.write(symbol_table)
+    f.write(relocation_table)
+    f.write(dynamic_section)
     f.seek(4096)
     f.write(payload)
 
