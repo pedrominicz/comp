@@ -30,6 +30,7 @@ def skip():
         # Skip whitespace.
         input_pos += 1
 
+# XXX: could turn this into a list. Strings can be serialized later.
 strings_len = 4096
 strings = bytearray(strings_len)
 strings_pos = 0
@@ -55,7 +56,8 @@ def add_identifier(identifier):
 # following entries the data. A token may be an integer literal, identifier, or
 # operator.
 #
-# Note: strings are added to `strings` and return an integer literal (pointer).
+# Note: strings are added to `strings` and return an integer literal (pointer)
+# while identifiers are added to the `identifiers` list.
 def next_token():
     global input_pos
     skip()

@@ -4,7 +4,8 @@
 .text
 _start:
         lea msg(%eip), %edi
-        call puts
+        mov $puts, %rax
+        call *%rax
 
         mov $60, %eax
         xor %edi, %edi

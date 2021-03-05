@@ -692,14 +692,11 @@ let elfgen outf =
   Printf.eprintf "dyn\t0x%08x (%d)\n" (dyn + off) dyn;
   List.iter (le 64) [
     1; 29;                      (* DT_NEEDED libc.so.6  *)
-    4; (va hash);               (* DT_HASH              *)
     5; (va strtab);             (* DT_STRTAB            *)
     6; (va symtab);             (* DT_SYMTAB            *)
     7; (va rel);                (* DT_RELA              *)
     8; (hash-rel);              (* DT_RELASZ            *)
     9; 24;                      (* DT_RELAENT           *)
-    10; (symtab-strtab);        (* DT_STRSZ             *)
-    11; 24;                     (* DT_SYMENT            *)
     0; (* 0; *)                 (* DT_NULL              *)
   ];
   let tend = !opos in
@@ -708,6 +705,7 @@ let elfgen outf =
   Bytes.blit glo 0 obuf textoff !gpos;
   Bytes.blit elfhdr 0 obuf 0 64;
   opos := 64;
+  Printf.eprintf "interp\t0x%08x\n" (strtab+1+off);
   elfphdr 3 (strtab+1+off) 28 1; (* PT_INTERP           *)
   elfphdr 1 0 (tend+off) 0x200000; (* PT_LOAD           *)
   elfphdr 2 (dyn+off) (tend-dyn) 8; (* PT_DYNAMIC       *)

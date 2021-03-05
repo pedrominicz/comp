@@ -4,8 +4,14 @@ set -e
 
 gcc -nostartfiles -no-pie hi.S -o hi
 python test_elf.py
-file test
+ocamlc qcc.ml
+rm qcc.cmi qcc.cmo
+./a.out hi.c 2>/dev/null
+chmod +x out
 file hi
+file out
+file test
+
 
 #python mcc.py
 
