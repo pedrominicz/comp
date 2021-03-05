@@ -54,7 +54,7 @@ def make_header():
         # Size of a program header table entry.
         b'\x38\x00'
         # Number of entries in the program header table.
-        b'\x02\x00'
+        b'\x03\x00'
         # Size of a section header table entry.
         b'\x00\x00'
         # Number of entries in the section header table.
@@ -65,7 +65,7 @@ def make_header():
 
 # Make 64-bit program header. Note that 32-bit program headers have different
 # member order.
-def make_program_header(segment_type, offset, size):
+def make_program_header(segment_type, offset, size, align):
     segment_type = ['load', 'dynamic', 'interpreter'].index(segment_type) + 1
     return (
         # Segment type.
@@ -83,14 +83,16 @@ def make_program_header(segment_type, offset, size):
         # Size of segment in memory.
         + size.to_bytes(8, 'little')
         # Alignment in file and memory.
-        + (4096).to_bytes(8, 'little'))
+        + (align).to_bytes(8, 'little'))
 
 string_table = (
     # First byte must be null.
     b'\x00'
     b'/lib64/ld-linux-x86-64.so.2\x00'
     b'libc.so.6\x00'
-    b'puts\x00')
+    b'puts\x00'
+    # XXX: hack to guarantee alignment (see assert below).
+    b'\x00\x00\x00\x00')
 
 symbol_table = (
     # Undefined symbol.
@@ -136,7 +138,8 @@ dynamic_section = (
     (8).to_bytes(8, 'little') +
     (len(relocation_table)).to_bytes(8, 'little') +
     # Size (in bytes) of relocation table entries.
-    (9).to_bytes(8, 'little') + (24).to_bytes(8, 'little'))
+    (9).to_bytes(8, 'little') + (24).to_bytes(8, 'little') +
+    (0).to_bytes(8, 'little'))
 
 payload = (
     # `lea msg(%eip), %edi`
@@ -144,7 +147,7 @@ payload = (
     # `mov $puts, %rax`
     b'\x48\xb8\x00\x00\x00\x00\x00\x00\x00\x00'
     # `call *%rax`
-    b'ff\xd0'
+    b'\xff\xd0'
     # `mov $60, %eax`
     b'\xb8\x3c\x00\x00\x00'
     # `xor %edi, %edi`
@@ -157,12 +160,18 @@ payload = (
 with open('test', 'wb') as f:
     f.write(make_header())
     # Points to the first nonempty string at the string table.
-    f.write(make_program_header('interpreter', 233, 28))
-    f.write(make_program_header('load', 4096, len(payload)))
+    f.write(make_program_header('interpreter', 233, 28, 1))
+    f.write(make_program_header('load', 0,
+        4096 + len(payload), 4096))
     f.write(make_program_header('dynamic',
-        232 + len(string_table), len(dynamic_section)))
+        232 + len(string_table) + len(symbol_table) + len(relocation_table),
+        len(dynamic_section), 8))
     f.write(string_table)
+    # The next three writes should be aligned to 8.
+    assert f.tell() % 8 == 0
     f.write(symbol_table)
+    # XXX: relocation table needs to be loaded. That is why the second segment
+    # (the `LOAD` segment) loads the entire file.
     f.write(relocation_table)
     f.write(dynamic_section)
     f.seek(4096)
