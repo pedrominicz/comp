@@ -13,7 +13,7 @@ alex Lex.x
 
 case "$1" in
   *.hs) ghci -XOverloadedStrings "$1";;
-  *)    echo "cannot run '$1'";;
+  *)    ghci -XOverloadedStrings Lex.hs;; #echo "cannot run '$1'";;
 esac
 
 #python mcc.py
