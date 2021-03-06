@@ -2,22 +2,20 @@
 
 set -e
 
-gcc -nostartfiles -no-pie hi.S -o hi
-python test_elf.py
-ocamlc qcc.ml
-rm qcc.cmi qcc.cmo
-./a.out hi.c 2>/dev/null
-chmod +x out
-file hi
-file out
-file test
+trap clean 0 1 2 3 6
 
+clean() {
+  rm -f Lex.hs Parse.hs *.{hi,o} Main
+}
+
+alex Lex.x
+#happy Parse.y
+
+case "$1" in
+  *.hs) ghci "$1";;
+  *)    ghci Lex.hs;; #echo "cannot run '$1'";;
+esac
 
 #python mcc.py
 
 #python test_asm.py |ndisasm -b64 -
-
-#python test_rpn.py |gcc -x assembler -nostartfiles -no-pie - -o test_rpn
-##objdump -d test_rpn
-#./test_rpn
-#rm test_rpn
