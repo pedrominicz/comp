@@ -1,60 +1,61 @@
 {
-module Lex (Token(..)) where
+module Lex (Token(..), scan) where
 
-import Control.Monad.Except
-import qualified Data.ByteString.Lazy.Char8 as ByteString (readInt)
+import Data.Either.Combinators
+import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as ByteString
+import qualified Data.ByteString.Lazy.Char8 as ByteString (readInt)
 }
 
-%wrapper "basic-bytestring"
+%wrapper "monad-bytestring"
 
 $digit = [0-9]
 $alpha = [a-zA-Z_]
 
 tokens :-
   -- Comments
-  -- TODO
+  "/*"          { comment }
 
   -- Keywords
-  "else"        { const Else }
-  "if"          { const If }
-  "int"         { const Int }
-  "return"      { const Return }
-  "while"       { const While }
+  "else"        { mk Else }
+  "if"          { mk If }
+  "int"         { mk Int }
+  "return"      { mk Return }
+  "while"       { mk While }
 
   -- Identifiers
-  $alpha ($digit | $alpha)+ { Identifier }
+  $alpha ($digit | $alpha)+ { identifier }
 
   -- Literals
-  $digit+       { IntLiteral . readInt }
-  \" (. # [\"\\] | \\ .)* \" { StringLiteral }
+  $digit+       { intLiteral }
+  \" (. # [\"\\] | \\ .)* \" { stringLiteral }
 
   -- Operators
-  ">>"          { const ShiftRight }
-  "<<"          { const ShiftLeft }
-  "<="          { const LE }
-  ">="          { const GE }
-  "=="          { const EQ' } -- Avoids conflict with `Prelude.EQ`.
-  "!="          { const NE }
-  ";"           { const Semicolon }
-  "{"           { const OpenBrace }
-  "}"           { const CloseBrace }
-  ","           { const Comma }
-  "="           { const Equals }
-  "("           { const OpenParen }
-  ")"           { const CloseParen }
-  "&"           { const BitwiseAnd }
-  "!"           { const Not }
-  "~"           { const BitwiseNot }
-  "-"           { const Minus }
-  "+"           { const Plus }
-  "*"           { const Asterisk }
-  "/"           { const Div }
-  "%"           { const Mod }
-  "<"           { const LT' } -- Avoids conflict with `Prelude.LT`.
-  ">"           { const GT' } -- Avoids conflict with `Prelude.GT`.
-  "^"           { const BitwiseXor }
-  "|"           { const BitwiseOr }
+  ">>"          { mk ShiftRight }
+  "<<"          { mk ShiftLeft }
+  "<="          { mk LE }
+  ">="          { mk GE }
+  "=="          { mk EQ' } -- Avoids conflict with `Prelude.EQ`.
+  "!="          { mk NE }
+  ";"           { mk Semicolon }
+  "{"           { mk OpenBrace }
+  "}"           { mk CloseBrace }
+  ","           { mk Comma }
+  "="           { mk Equals }
+  "("           { mk OpenParen }
+  ")"           { mk CloseParen }
+  "&"           { mk BitwiseAnd }
+  "!"           { mk Not }
+  "~"           { mk BitwiseNot }
+  "-"           { mk Minus }
+  "+"           { mk Plus }
+  "*"           { mk Asterisk }
+  "/"           { mk Div }
+  "%"           { mk Mod }
+  "<"           { mk LT' } -- Avoids conflict with `Prelude.LT`.
+  ">"           { mk GT' } -- Avoids conflict with `Prelude.GT`.
+  "^"           { mk BitwiseXor }
+  "|"           { mk BitwiseOr }
 
   -- Whitespace
   $white+       ;
@@ -68,10 +69,10 @@ data Token
   | Return
   | While
   -- Identifiers
-  | Identifier ByteString.ByteString
+  | Identifier ByteString
   -- Literals
   | IntLiteral Int
-  | StringLiteral ByteString.ByteString
+  | StringLiteral ByteString
   -- Operators
   | ShiftRight  -- >>
   | ShiftLeft   -- <<
@@ -98,25 +99,56 @@ data Token
   | GT'         -- > (avoids conflict with `Prelude.GT`)
   | BitwiseXor  -- ^
   | BitwiseOr   -- |
-  deriving (Show)
+  | EOF
+  deriving (Eq, Show)
 
-readInt :: ByteString.ByteString -> Int
+alexEOF :: Alex Token
+alexEOF = return EOF
+
+comment :: AlexInput -> Int64 -> Alex Token
+comment _ _ = alexGetInput >>= go
+  where
+  go input = do
+    case alexGetByte input of
+      Nothing -> done input
+      Just (42, input) ->
+        case alexGetByte input of
+          Nothing          -> done input
+          Just (47, input) -> done input
+          Just (42, _)     -> go input
+          Just (_, input)  -> go input
+      Just (c, input) -> go input
+
+  done input = do
+    alexSetInput input
+    alexMonadScan
+
+mk :: Token -> AlexInput -> Int64 -> Alex Token
+mk t _ _ = return t
+
+identifier :: AlexInput -> Int64 -> Alex Token
+identifier (_, _, str, _) len = return . Identifier $ ByteString.take len str
+
+intLiteral :: AlexInput -> Int64 -> Alex Token
+intLiteral (_, _, str, _) len =
+  return . IntLiteral . readInt $ ByteString.take len str
+
+stringLiteral :: AlexInput -> Int64 -> Alex Token
+stringLiteral (_, _, str, _) len =
+  return . StringLiteral $ ByteString.take len str
+
+readInt :: ByteString -> Int
 readInt str =
   case ByteString.readInt str of
     Just (x, empty) -> x
     _ -> error "unreachable"
 
-tokenize :: ByteString.ByteString -> Except AlexInput [Token]
-tokenize str = go (AlexInput '\n' str 0)
+scan :: ByteString -> Maybe [Token]
+scan str = rightToMaybe $ runAlex str go
   where
-  go :: AlexInput -> Except AlexInput [Token]
-  go input =
-    case alexScan input 0 of
-      AlexEOF -> return []
-      AlexError err -> throwError err
-      AlexSkip input _ -> go input
-      AlexToken input' _ act -> do
-        let len = alexBytePos input' - alexBytePos input
-        rest <- go input'
-        return $ act (ByteString.take len (alexStr input)) : rest
+  go = do
+    token <- alexMonadScan
+    case token of
+      EOF -> return []
+      token -> go >>= return . (token :)
 }
