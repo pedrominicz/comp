@@ -12,8 +12,8 @@ alex Lex.x
 #happy Parse.y
 
 case "$1" in
-  *.hs) ghci "$1";;
-  *)    ghci Lex.hs;; #echo "cannot run '$1'";;
+  *.hs) ghci -XOverloadedStrings "$1";;
+  *)    echo "cannot run '$1'";;
 esac
 
 #python mcc.py
