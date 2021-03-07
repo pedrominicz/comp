@@ -15,6 +15,7 @@ import qualified Data.ByteString.Lazy as ByteString
 %error { const Nothing }
 
 %name parseExpr expr
+%name parseStmt stmt
 
 %token
   -- Keywords
@@ -56,6 +57,10 @@ import qualified Data.ByteString.Lazy as ByteString
   '|'           { L.BitwiseOr }
 %%
 
+-----------------
+-- Expressions --
+-----------------
+
 prim_expr :: { Expr }
   : identifier                  { Identifier $1 }
   | integer                     { IntLiteral $1 }
@@ -69,7 +74,7 @@ postfix_expr :: { Expr }
 
 expr_list :: { [Expr] }
   : expr                        { [$1] }
-  | expr_list ',' expr          { $3 : $1 }
+  | expr ',' expr_list          { $1 : $3 }
 
 unary_expr :: { Expr }
   : postfix_expr                { $1 }
@@ -123,3 +128,29 @@ or_expr :: { Expr }
 expr :: { Expr }
   : or_expr                     { $1 }
   | identifier '=' expr         { Assignment $1 $3 }
+
+----------------
+-- Statements --
+----------------
+
+stmt :: { Stmt }
+  : expr ';'                    { Expression $1 }
+  | 'if' '(' expr ')' block     { If $3 $5 }
+  | 'if' '(' expr ')' block 'else' block { IfElse $3 $5 $7 }
+  | 'while' '(' expr ')' block  { While $3 $5 }
+  | 'return' expr ';'           { Return $2 }
+
+block :: { Stmt }
+  : '{' stmt_list '}'           { Compound [] $2 }
+  | '{' decl_list stmt_list '}' { Compound $2 $3 }
+
+decl :: { ByteString }
+  : 'int' identifier ';'        { $2 }
+
+decl_list :: { [ByteString] }
+  : decl                        { [$1] }
+  | decl decl_list              { $1 : $2 }
+
+stmt_list :: { [Stmt] }
+  : stmt                        { [$1] }
+  | stmt stmt_list              { $1 : $2 }

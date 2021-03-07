@@ -43,4 +43,5 @@ data Stmt
   | If Expr Stmt
   | IfElse Expr Stmt Stmt
   | While Expr Stmt
+  | Return Expr
   deriving (Eq, Show)
