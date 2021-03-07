@@ -9,11 +9,11 @@ clean() {
 }
 
 alex Lex.x
-#happy Parse.y
+happy Parse.y
 
 case "$1" in
-  *.hs) ghci -XOverloadedStrings "$1";;
-  *)    ghci -XOverloadedStrings Lex.hs;; #echo "cannot run '$1'";;
+  *.hs|*.x|*.y) ghci -XOverloadedStrings "${1%.*}.hs";;
+  *)            echo "cannot run '$1'";;
 esac
 
 #python mcc.py

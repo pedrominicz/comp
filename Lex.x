@@ -24,15 +24,15 @@ tokens :-
   "while"       { mk While }
 
   -- Identifiers
-  $alpha ($digit | $alpha)+ { identifier }
+  $alpha ($digit | $alpha)* { identifier }
 
   -- Literals
   $digit+       { intLiteral }
   \" (. # [\"\\] | \\ .)* \" { stringLiteral }
 
   -- Operators
-  ">>"          { mk ShiftRight }
   "<<"          { mk ShiftLeft }
+  ">>"          { mk ShiftRight }
   "<="          { mk LE }
   ">="          { mk GE }
   "=="          { mk EQ' } -- Avoids conflict with `Prelude.EQ`.
@@ -74,8 +74,8 @@ data Token
   | IntLiteral Int
   | StringLiteral ByteString
   -- Operators
-  | ShiftRight  -- >>
   | ShiftLeft   -- <<
+  | ShiftRight  -- >>
   | LE          -- <=
   | GE          -- >=
   | EQ'         -- == (avoids conflict with `Prelude.EQ`)
