@@ -13,8 +13,6 @@ happy Parse.y
 
 runhaskell Test.hs
 
-exit
-
 case "$1" in
   *.hs|*.x|*.y) ghci "${1%.*}.hs";;
   *)            echo "cannot run '$1'";;
