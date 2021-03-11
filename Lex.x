@@ -28,15 +28,8 @@ tokens :-
 
   -- Literals
   $digit+       { intLiteral }
-  \" (. # [\"\\] | \\ .)* \" { stringLiteral }
 
   -- Operators
-  "<<"          { mk ShiftLeft }
-  ">>"          { mk ShiftRight }
-  "<="          { mk LE }
-  ">="          { mk GE }
-  "=="          { mk EQ' } -- Avoids conflict with `Prelude.EQ`.
-  "!="          { mk NE }
   ";"           { mk Semicolon }
   "{"           { mk OpenBrace }
   "}"           { mk CloseBrace }
@@ -44,18 +37,7 @@ tokens :-
   "="           { mk Equals }
   "("           { mk OpenParen }
   ")"           { mk CloseParen }
-  "&"           { mk BitwiseAnd }
-  "!"           { mk Not }
-  "~"           { mk BitwiseNot }
-  "-"           { mk Minus }
   "+"           { mk Plus }
-  "*"           { mk Asterisk }
-  "/"           { mk Div }
-  "%"           { mk Mod }
-  "<"           { mk LT' } -- Avoids conflict with `Prelude.LT`.
-  ">"           { mk GT' } -- Avoids conflict with `Prelude.GT`.
-  "^"           { mk BitwiseXor }
-  "|"           { mk BitwiseOr }
 
   -- Whitespace
   $white+       ;
@@ -72,14 +54,7 @@ data Token
   | Identifier ByteString
   -- Literals
   | IntLiteral Int
-  | StringLiteral ByteString
   -- Operators
-  | ShiftLeft   -- <<
-  | ShiftRight  -- >>
-  | LE          -- <=
-  | GE          -- >=
-  | EQ'         -- == (avoids conflict with `Prelude.EQ`)
-  | NE          -- !=
   | Semicolon   -- ;
   | OpenBrace   -- {
   | CloseBrace  -- }
@@ -87,18 +62,7 @@ data Token
   | Equals      -- =
   | OpenParen   -- (
   | CloseParen  -- )
-  | BitwiseAnd  -- &
-  | Not         -- !
-  | BitwiseNot  -- ~
-  | Minus       -- -
   | Plus        -- +
-  | Asterisk    -- *
-  | Div         -- /
-  | Mod         -- %
-  | LT'         -- < (avoids conflict with `Prelude.LT`)
-  | GT'         -- > (avoids conflict with `Prelude.GT`)
-  | BitwiseXor  -- ^
-  | BitwiseOr   -- |
   | EOF
   deriving (Eq, Show)
 
@@ -132,10 +96,6 @@ identifier (_, _, str, _) len = return . Identifier $ ByteString.take len str
 intLiteral :: AlexInput -> Int64 -> Alex Token
 intLiteral (_, _, str, _) len =
   return . IntLiteral . readInt $ ByteString.take len str
-
-stringLiteral :: AlexInput -> Int64 -> Alex Token
-stringLiteral (_, _, str, _) len =
-  return . StringLiteral $ ByteString.take len str
 
 readInt :: ByteString -> Int
 readInt str =
