@@ -26,7 +26,7 @@ import qualified Data.ByteString.Lazy as ByteString
   'return'      { L.Return }
   'while'       { L.While }
   -- Identifiers
-  identifier    { L.Identifier $$ }
+  identifier    { L.Id $$ }
   -- Literals
   integer       { L.IntLiteral $$ }
   -- Operators
@@ -45,8 +45,8 @@ import qualified Data.ByteString.Lazy as ByteString
 -----------------
 
 prim_expr :: { Expr }
-  : identifier                  { Identifier $1 }
-  | integer                     { IntLiteral $1 }
+  : identifier                  { Id $1 }
+  | integer                     { Int $1 }
   | '(' expr ')'                { $2 }
 
 postfix_expr :: { Expr }
@@ -64,7 +64,7 @@ add_expr :: { Expr }
 
 expr :: { Expr }
   : add_expr                    { $1 }
-  | identifier '=' expr         { Assignment $1 $3 }
+  | identifier '=' expr         { Assign $1 $3 }
 
 ----------------
 -- Statements --

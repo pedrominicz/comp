@@ -5,14 +5,14 @@ import qualified Data.ByteString.Lazy as ByteString
 
 data Expr
   -- Primary expressions
-  = Identifier ByteString
-  | IntLiteral Int
+  = Id ByteString
+  | Int Int
   -- Postfix expresssions
   | Call Expr [Expr]
   -- Binary expressions   
   | Add Expr Expr
   -- Assigment expressions
-  | Assignment ByteString Expr
+  | Assign ByteString Expr
   deriving (Eq, Show)
 
 data Stmt

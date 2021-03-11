@@ -27,7 +27,7 @@ tokens :-
   $alpha ($digit | $alpha)* { identifier }
 
   -- Literals
-  $digit+       { intLiteral }
+  $digit+       { int }
 
   -- Operators
   ";"           { mk Semicolon }
@@ -51,7 +51,7 @@ data Token
   | Return
   | While
   -- Identifiers
-  | Identifier ByteString
+  | Id ByteString
   -- Literals
   | IntLiteral Int
   -- Operators
@@ -91,10 +91,10 @@ mk :: Token -> AlexInput -> Int64 -> Alex Token
 mk t _ _ = return t
 
 identifier :: AlexInput -> Int64 -> Alex Token
-identifier (_, _, str, _) len = return . Identifier $ ByteString.take len str
+identifier (_, _, str, _) len = return . Id $ ByteString.take len str
 
-intLiteral :: AlexInput -> Int64 -> Alex Token
-intLiteral (_, _, str, _) len =
+int :: AlexInput -> Int64 -> Alex Token
+int (_, _, str, _) len =
   return . IntLiteral . readInt $ ByteString.take len str
 
 readInt :: ByteString -> Int
