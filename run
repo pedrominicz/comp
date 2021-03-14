@@ -14,10 +14,7 @@ happy Parse.y
 runhaskell Test.hs
 
 case "$1" in
+  Test.hs)      ;;
   *.hs|*.x|*.y) ghci "${1%.*}.hs";;
   *)            echo "cannot run '$1'";;
 esac
-
-#python mcc.py
-
-#python test_asm.py |ndisasm -b64 -

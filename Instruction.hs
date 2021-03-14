@@ -1,9 +1,12 @@
 module Instruction where
 
-import Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Lazy as B
 
 data Instruction
   = Int Int
-  -- | Call Int
+  | Call Int
   | Add
+  | Local Int
+  | Global B.ByteString
+  | Assign Int
   deriving (Eq, Show)

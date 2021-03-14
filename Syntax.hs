@@ -1,18 +1,17 @@
 module Syntax where
 
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as ByteString
+import qualified Data.ByteString.Lazy as B
 
 data Expr
   -- Primary expressions
-  = Id ByteString
+  = Id B.ByteString
   | Int Int
   -- Postfix expresssions
   | Call Expr [Expr]
   -- Binary expressions   
   | Add Expr Expr
   -- Assigment expressions
-  | Assign ByteString Expr
+  | Assign B.ByteString Expr
   deriving (Eq, Show)
 
 data Stmt
@@ -24,8 +23,8 @@ data Stmt
   deriving (Eq, Show)
 
 data Func = Func
-  { funcName :: ByteString
-  , funcArgs :: [ByteString]
-  , funcDecl :: [ByteString]
+  { funcName :: B.ByteString
+  , funcArgs :: [B.ByteString]
+  , funcDecl :: [B.ByteString]
   , funcBody :: [Stmt]
   } deriving (Eq, Show)
