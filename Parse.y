@@ -5,8 +5,7 @@ import Lex (Token)
 import qualified Lex as L
 import Syntax
 
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as ByteString
+import qualified Data.ByteString.Lazy as B
 }
 
 %tokentype { Token }
@@ -88,21 +87,21 @@ stmt_list :: { [Stmt] }
 -- Functions --
 ---------------
 
-arg :: { ByteString }
+arg :: { B.ByteString }
   : 'int' identifier            { $2 }
 
-arg_list :: { [ByteString] }
+arg_list :: { [B.ByteString] }
   : arg                         { [$1] }
   | arg ',' arg_list            { $1 : $3 }
 
-decl :: { ByteString }
+decl :: { B.ByteString }
   : 'int' identifier ';'        { $2 }
 
-decl_list :: { [ByteString] }
+decl_list :: { [B.ByteString] }
   : decl                        { [$1] }
   | decl decl_list              { $1 : $2 }
 
-body :: { ([ByteString], [Stmt]) }
+body :: { ([B.ByteString], [Stmt]) }
   : '{' decl_list stmt_list '}' { ($2, $3) }
   | '{' stmt_list '}'           { ([], $2) }
 

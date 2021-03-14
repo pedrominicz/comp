@@ -2,9 +2,8 @@
 module Lex (Token(..), scan) where
 
 import Data.Either.Combinators
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as ByteString
-import qualified Data.ByteString.Lazy.Char8 as ByteString (readInt)
+import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString.Lazy.Char8 as B (readInt)
 }
 
 %wrapper "monad-bytestring"
@@ -51,7 +50,7 @@ data Token
   | Return
   | While
   -- Identifiers
-  | Id ByteString
+  | Id B.ByteString
   -- Literals
   | IntLiteral Int
   -- Operators
@@ -91,19 +90,19 @@ mk :: Token -> AlexInput -> Int64 -> Alex Token
 mk t _ _ = return t
 
 identifier :: AlexInput -> Int64 -> Alex Token
-identifier (_, _, str, _) len = return . Id $ ByteString.take len str
+identifier (_, _, str, _) len = return . Id $ B.take len str
 
 int :: AlexInput -> Int64 -> Alex Token
 int (_, _, str, _) len =
-  return . IntLiteral . readInt $ ByteString.take len str
+  return . IntLiteral . readInt $ B.take len str
 
-readInt :: ByteString -> Int
+readInt :: B.ByteString -> Int
 readInt str =
-  case ByteString.readInt str of
+  case B.readInt str of
     Just (x, empty) -> x
     _ -> error "unreachable"
 
-scan :: ByteString -> Maybe [Token]
+scan :: B.ByteString -> Maybe [Token]
 scan str = rightToMaybe $ runAlex str go
   where
   go = do
