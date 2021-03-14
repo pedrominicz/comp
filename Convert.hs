@@ -12,15 +12,13 @@ import qualified Data.Set as S
 
 type Env = M.Map B.ByteString Int
 
-type Convert a = RWST Env (S.Set B.ByteString) (Int, Int) Maybe a
-
-next :: Convert Int
+next :: RWST Env (S.Set B.ByteString) Int Maybe Int
 next = do
-  x <- gets snd
-  modify $ fmap succ
+  x <- get
+  modify succ
   return x
 
-convertExpr :: S.Expr -> Convert [I.Instruction]
+convertExpr :: S.Expr -> RWST Env (S.Set B.ByteString) Int Maybe [I.Instruction]
 convertExpr e = case e of
   S.Id i -> do
     env <- ask
@@ -44,7 +42,7 @@ convertExpr e = case e of
       Just i -> return $ e ++ [I.Assign i]
       Nothing -> lift Nothing
 
-convertStmt :: S.Stmt -> Convert [I.Instruction]
+convertStmt :: S.Stmt -> RWST Env (S.Set B.ByteString) Int Maybe [I.Instruction]
 convertStmt s = case s of
   S.Expr e -> do
     e <- convertExpr e
@@ -71,5 +69,10 @@ convertStmt s = case s of
       ss ++ [I.Jump start, I.Label end]
   S.Return e -> do
     e <- convertExpr e
-    x <- gets fst
-    return $ e ++ [I.Return x]
+    return $ e ++ [I.Return]
+
+convertFunc :: S.Func -> RWST Env (S.Set B.ByteString) Int Maybe [I.Instruction]
+convertFunc (S.Func name args decl ss) = do
+  let env = M.fromList $ zip (args ++ decl) [0..]
+  ss <- local (const env) $ concat <$> for ss convertStmt
+  return $ [I.Func name (length args) (length decl)] ++ ss ++ [I.Int 0, I.Return]

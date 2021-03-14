@@ -45,13 +45,13 @@ parseTests =
   , go parseStmt "if(0) { 1; } else { 2; }" == Just (S.IfElse (S.Int 0) [(S.Expr (S.Int 1))] [(S.Expr (S.Int 2))])
   , go parseStmt "while(x) { x = x + 1; }"  == Just (S.While (S.Id "x") [S.Expr (S.Assign "x" (S.Add (S.Id "x") (S.Int 1)))])
   -- Functions
-  , go parseFunc "f() { return 0; }"               == Just (S.Func "f" [] [] [S.Return (S.Int 0)])
-  , go parseFunc "f() { x = 0; return x; }"        == Just (S.Func "f" [] [] [S.Expr (S.Assign "x" (S.Int 0)), S.Return (S.Id "x")])
-  , go parseFunc "f() { int x; return 0; }"        == Just (S.Func "f" [] ["x"] [S.Return (S.Int 0)])
-  , go parseFunc "f() { int x; int y; return 0; }" == Just (S.Func "f" [] ["x", "y"] [S.Return (S.Int 0)])
-  , go parseFunc "f(int x) { return 0; }"          == Just (S.Func "f" ["x"] [] [S.Return (S.Int 0)])
-  , go parseFunc "f(int x, int y) { return 0; }"   == Just (S.Func "f" ["x", "y"] [] [S.Return (S.Int 0)])
-  , go parseFunc "f(int x) { int y; return 0; }"   == Just (S.Func "f" ["x"] ["y"] [S.Return (S.Int 0)])
+  , go parseFunc "int f() { return 0; }"               == Just (S.Func "f" [] [] [S.Return (S.Int 0)])
+  , go parseFunc "int f() { x = 0; return x; }"        == Just (S.Func "f" [] [] [S.Expr (S.Assign "x" (S.Int 0)), S.Return (S.Id "x")])
+  , go parseFunc "int f() { int x; return 0; }"        == Just (S.Func "f" [] ["x"] [S.Return (S.Int 0)])
+  , go parseFunc "int f() { int x; int y; return 0; }" == Just (S.Func "f" [] ["x", "y"] [S.Return (S.Int 0)])
+  , go parseFunc "int f(int x) { return 0; }"          == Just (S.Func "f" ["x"] [] [S.Return (S.Int 0)])
+  , go parseFunc "int f(int x, int y) { return 0; }"   == Just (S.Func "f" ["x", "y"] [] [S.Return (S.Int 0)])
+  , go parseFunc "int f(int x) { int y; return 0; }"   == Just (S.Func "f" ["x"] ["y"] [S.Return (S.Int 0)])
   ]
   where
   go f str = do
@@ -69,20 +69,33 @@ convertTests =
   , goExpr "f(1, 2, g(10, 20, 30), 4)" == Just (S.fromList ["f", "g"],        [I.Int 4, I.Int 30, I.Int 20, I.Int 10, I.Global "g", I.Call 3, I.Int 2, I.Int 1, I.Global "f", I.Call 4])
   -- Statements
   , goStmt "2 + 2;"                   == Just [I.Int 2, I.Int 2, I.Add, I.Discard]
-  , goStmt "if(1) { return 0; }"      == Just [I.Int 1, I.JumpZero 0, I.Int 0, I.Return 3, I.Label 0]
+  , goStmt "if(1) { return 0; }"      == Just [I.Int 1, I.JumpZero 0, I.Int 0, I.Return, I.Label 0]
   , goStmt "if(0) { 1; } else { 0; }" == Just [I.Int 0, I.JumpZero 0, I.Int 1, I.Discard, I.Jump 1, I.Label 0, I.Int 0, I.Discard, I.Label 1]
   , goStmt "while(x) { x = f(x); }"   == Just [I.Label 0, I.Local 2, I.JumpZero 1, I.Local 2, I.Global "f", I.Call 1, I.Assign 2, I.Discard, I.Jump 0, I.Label 1]
+  -- Functions
+  , goFunc "int f() { return 0; }"            == Just [I.Func "f" 0 0, I.Int 0, I.Return, I.Int 0, I.Return]
+  , goFunc "int f() { x = 0; return x; }"     == Nothing
+  , goFunc "int f() { int x; x; }"            == Just [I.Func "f" 0 1, I.Local 0, I.Discard, I.Int 0, I.Return]
+  , goFunc "int f() { int x; int y; x + y; }" == Just [I.Func "f" 0 2, I.Local 0, I.Local 1, I.Add, I.Discard, I.Int 0, I.Return]
+  , goFunc "int f(int x) { x; }"              == Just [I.Func "f" 1 0, I.Local 0, I.Discard, I.Int 0, I.Return]
+  , goFunc "int f(int x, int y) { x + y; }"   == Just [I.Func "f" 2 0, I.Local 0, I.Local 1, I.Add, I.Discard, I.Int 0, I.Return]
+  , goFunc "int f(int x) { int y; x + y; }"   == Just [I.Func "f" 1 1, I.Local 0, I.Local 1, I.Add, I.Discard, I.Int 0, I.Return]
   ]
   where
   goExpr str = do
     ts <- scan str
     e <- parseExpr ts
-    swap <$> evalRWST (convertExpr e) (M.fromList [("x", 2), ("y", 1)]) (0, 0)
+    swap <$> evalRWST (convertExpr e) (M.fromList [("x", 2), ("y", 1)]) 0
 
   goStmt str = do
     ts <- scan str
     s <- parseStmt ts
-    fst <$> evalRWST (convertStmt s) (M.fromList [("x", 2), ("y", 1)]) (3, 0)
+    fst <$> evalRWST (convertStmt s) (M.fromList [("x", 2), ("y", 1)]) 0
+
+  goFunc str = do
+    ts <- scan str
+    f <- parseFunc ts
+    fst <$> evalRWST (convertFunc f) M.empty 0
 
 tests :: [Bool]
 tests = lexTests ++ parseTests ++ convertTests
