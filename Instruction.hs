@@ -13,5 +13,6 @@ data Instruction
   | JumpZero Int
   | Jump Int
   | Label Int
-  | Return Int
+  | Return
+  | Func B.ByteString Int Int
   deriving (Eq, Show)

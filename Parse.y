@@ -106,5 +106,5 @@ body :: { ([B.ByteString], [Stmt]) }
   | '{' stmt_list '}'           { ([], $2) }
 
 func :: { Func }
-  : identifier '(' ')' body     { Func $1 [] (fst $4) (snd $4) }
-  | identifier '(' arg_list ')' body { Func $1 $3 (fst $5) (snd $5) }
+  : 'int' identifier '(' ')' body { Func $2 [] (fst $5) (snd $5) }
+  | 'int' identifier '(' arg_list ')' body { Func $2 $4 (fst $6) (snd $6) }
