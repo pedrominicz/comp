@@ -60,18 +60,29 @@ parseTests =
 
 convertTests :: [Bool]
 convertTests = 
-  [ go "2 + 2 + 2"                 == Just (S.empty,                      [I.Int 2, I.Int 2, I.Add, I.Int 2, I.Add])
-  , go "2 + (2 + 2)"               == Just (S.empty,                      [I.Int 2, I.Int 2, I.Int 2, I.Add, I.Add])
-  , go "x + a"                     == Just (S.fromList ["a"],             [I.Local 2, I.Global "a", I.Add])
-  , go "x = getchar()"             == Just (S.fromList ["getchar"],       [I.Global "getchar", I.Call 0, I.Assign 2])
-  , go "x = y = getc(stdin)"       == Just (S.fromList ["getc", "stdin"], [I.Global "stdin", I.Global "getc", I.Call 1, I.Assign 1, I.Assign 2])
-  , go "f(1, 2, g(10, 20, 30), 4)" == Just (S.fromList ["f", "g"],        [I.Int 4, I.Int 30, I.Int 20, I.Int 10, I.Global "g", I.Call 3, I.Int 2, I.Int 1, I.Global "f", I.Call 4])
+  -- Expressions
+  [ goExpr "2 + 2 + 2"                 == Just (S.empty,                      [I.Int 2, I.Int 2, I.Add, I.Int 2, I.Add])
+  , goExpr "2 + (2 + 2)"               == Just (S.empty,                      [I.Int 2, I.Int 2, I.Int 2, I.Add, I.Add])
+  , goExpr "x + a"                     == Just (S.fromList ["a"],             [I.Local 2, I.Global "a", I.Add])
+  , goExpr "x = getchar()"             == Just (S.fromList ["getchar"],       [I.Global "getchar", I.Call 0, I.Assign 2])
+  , goExpr "x = y = getc(stdin)"       == Just (S.fromList ["getc", "stdin"], [I.Global "stdin", I.Global "getc", I.Call 1, I.Assign 1, I.Assign 2])
+  , goExpr "f(1, 2, g(10, 20, 30), 4)" == Just (S.fromList ["f", "g"],        [I.Int 4, I.Int 30, I.Int 20, I.Int 10, I.Global "g", I.Call 3, I.Int 2, I.Int 1, I.Global "f", I.Call 4])
+  -- Statements
+  , goStmt "2 + 2;"                   == Just [I.Int 2, I.Int 2, I.Add, I.Discard]
+  , goStmt "if(1) { return 0; }"      == Just [I.Int 1, I.JumpZero 0, I.Int 0, I.Return 3, I.Label 0]
+  , goStmt "if(0) { 1; } else { 0; }" == Just [I.Int 0, I.JumpZero 0, I.Int 1, I.Discard, I.Jump 1, I.Label 0, I.Int 0, I.Discard, I.Label 1]
+  , goStmt "while(x) { x = f(x); }"   == Just [I.Label 0, I.Local 2, I.JumpZero 1, I.Local 2, I.Global "f", I.Call 1, I.Assign 2, I.Discard, I.Jump 0, I.Label 1]
   ]
   where
-  go str = do
+  goExpr str = do
     ts <- scan str
     e <- parseExpr ts
-    swap <$> evalRWST (convertExpr e) (M.fromList [("x", 2), ("y", 1)]) 0
+    swap <$> evalRWST (convertExpr e) (M.fromList [("x", 2), ("y", 1)]) (0, 0)
+
+  goStmt str = do
+    ts <- scan str
+    s <- parseStmt ts
+    fst <$> evalRWST (convertStmt s) (M.fromList [("x", 2), ("y", 1)]) (3, 0)
 
 tests :: [Bool]
 tests = lexTests ++ parseTests ++ convertTests

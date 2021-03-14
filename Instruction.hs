@@ -9,4 +9,9 @@ data Instruction
   | Local Int
   | Global B.ByteString
   | Assign Int
+  | Discard
+  | JumpZero Int
+  | Jump Int
+  | Label Int
+  | Return Int
   deriving (Eq, Show)
