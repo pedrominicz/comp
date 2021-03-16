@@ -16,6 +16,7 @@ import qualified Data.ByteString.Lazy as B
 %name parseExpr expr
 %name parseStmt stmt
 %name parseFunc func
+%name parseProg prog
 
 %token
   -- Keywords
@@ -108,3 +109,14 @@ body :: { ([B.ByteString], [Stmt]) }
 func :: { Func }
   : 'int' identifier '(' ')' body { Func $2 [] (fst $5) (snd $5) }
   | 'int' identifier '(' arg_list ')' body { Func $2 $4 (fst $6) (snd $6) }
+
+-------------
+-- Program --
+-------------
+
+func_list :: { [Func] }
+  : func                        { [$1] }
+  | func func_list              { $1 : $2 }
+
+prog :: { [Func] }
+  : func_list                   { $1 }
