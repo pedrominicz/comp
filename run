@@ -24,7 +24,8 @@ int main() {
     message(0);
     message(0);
   }
-  x = x + 1;
+  x = 42;
+  message(x);
   while(x) {
     message(x);
     x = x + 5;

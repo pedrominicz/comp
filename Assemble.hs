@@ -20,6 +20,7 @@ assemble i = case i of
       putStrLn $ "        pop %rbx"
       putStrLn $ "        mov %rbx, %" ++ reg
     putStrLn $ "        call *%rax"
+    putStrLn $ "        push %rax"
     putStrLn $ "        nop"
   Add -> do
     putStrLn $ "        pop %rcx"
