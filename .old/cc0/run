@@ -1,0 +1,41 @@
+#!/bin/sh
+
+set -e
+
+trap clean 0 1 2 3 6
+
+clean() {
+  rm -f Lex.hs Parse.hs *.{hi,o} Main
+}
+
+alex Lex.x
+happy Parse.y
+
+runhaskell Main.hs <<EOF >out.S
+int main() {
+  int x;
+  x = 0;
+  if(x) {
+    message(42);
+  }
+  if(x) {
+    message(0);
+  } else {
+    message(0);
+    message(0);
+  }
+  x = 42;
+  message(x);
+  while(x) {
+    message(x);
+    x = x + 5;
+  }
+  return 0;
+}
+EOF
+
+gcc -nostartfiles -no-pie lib.c out.S -o out
+./out
+
+#gcc -c -fno-pic -no-pie -O0 test.c
+#objdump -d test.o |less
