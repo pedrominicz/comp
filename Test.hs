@@ -75,11 +75,11 @@ convertTests =
   -- Functions
   , goFunc "int f() { return 0; }"            == Just [I.Func "f" 0 0, I.Int 0, I.Return, I.Int 0, I.Return]
   , goFunc "int f() { x = 0; return x; }"     == Nothing
-  , goFunc "int f() { int x; x; }"            == Just [I.Func "f" 0 1, I.Local 0, I.Discard, I.Int 0, I.Return]
-  , goFunc "int f() { int x; int y; x + y; }" == Just [I.Func "f" 0 2, I.Local 0, I.Local 1, I.Add, I.Discard, I.Int 0, I.Return]
-  , goFunc "int f(int x) { x; }"              == Just [I.Func "f" 1 0, I.Local 0, I.Discard, I.Int 0, I.Return]
-  , goFunc "int f(int x, int y) { x + y; }"   == Just [I.Func "f" 2 0, I.Local 0, I.Local 1, I.Add, I.Discard, I.Int 0, I.Return]
-  , goFunc "int f(int x) { int y; x + y; }"   == Just [I.Func "f" 1 1, I.Local 0, I.Local 1, I.Add, I.Discard, I.Int 0, I.Return]
+  , goFunc "int f() { int x; x; }"            == Just [I.Func "f" 0 1, I.Local 1, I.Discard, I.Int 0, I.Return]
+  , goFunc "int f() { int x; int y; x + y; }" == Just [I.Func "f" 0 2, I.Local 1, I.Local 2, I.Add, I.Discard, I.Int 0, I.Return]
+  , goFunc "int f(int x) { x; }"              == Just [I.Func "f" 1 0, I.Local 1, I.Discard, I.Int 0, I.Return]
+  , goFunc "int f(int x, int y) { x + y; }"   == Just [I.Func "f" 2 0, I.Local 1, I.Local 2, I.Add, I.Discard, I.Int 0, I.Return]
+  , goFunc "int f(int x) { int y; x + y; }"   == Just [I.Func "f" 1 1, I.Local 1, I.Local 2, I.Add, I.Discard, I.Int 0, I.Return]
   ]
   where
   goExpr str = do

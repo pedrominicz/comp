@@ -73,6 +73,6 @@ convertStmt s = case s of
 
 convertFunc :: S.Func -> RWST Env (S.Set B.ByteString) Int Maybe [I.Instruction]
 convertFunc (S.Func name args decl ss) = do
-  let env = M.fromList $ zip (args ++ decl) [0..]
+  let env = M.fromList $ zip (args ++ decl) [1..]
   ss <- local (const env) $ concat <$> for ss convertStmt
   return $ [I.Func name (length args) (length decl)] ++ ss ++ [I.Int 0, I.Return]

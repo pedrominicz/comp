@@ -11,10 +11,27 @@ clean() {
 alex Lex.x
 happy Parse.y
 
-runhaskell Test.hs
+runhaskell Main.hs <<EOF >out.S
+int main() {
+  int x;
+  x = 0;
+  if(x) {
+    message(42);
+  }
+  if(x) {
+    message(0);
+  } else {
+    message(0);
+    message(0);
+  }
+  x = x + 1;
+  while(x) {
+    message(x);
+    x = x + 5;
+  }
+  return 0;
+}
+EOF
 
-case "$1" in
-  Test.hs)      ;;
-  *.hs|*.x|*.y) ghci "${1%.*}.hs";;
-  *)            echo "cannot run '$1'";;
-esac
+gcc -nostartfiles -no-pie lib.c out.S -o out
+./out
