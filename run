@@ -5,5 +5,11 @@ set -e
 trap clean 0 1 2 3 6
 
 clean() {
-  true
+  rm -rf a.out *.cm{i,o}
 }
+
+ocamlc tokenKind.ml
+ocamlc tokenKind.cmo token.ml
+ocamlc scanner.ml
+ocamlc tokenKind.cmo token.cmo scanner.cmo main.ml
+./a.out
