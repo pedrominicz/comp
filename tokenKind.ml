@@ -29,8 +29,8 @@ type t =
   | Class
   | Else
   | False
-  | Fun
   | For
+  | Fun
   | If
   | Nil
   | Or
@@ -42,7 +42,7 @@ type t =
   | Var
   | While
   (* End of file. *)
-  | Eof
+  | EOF
 
 let to_string = function
   (* Single-character tokens. *)
@@ -67,16 +67,16 @@ let to_string = function
   | Less -> "<"
   | LessEqual -> "<="
   (* Literals. *)
-  | Identifier s -> s
-  | String s -> s
-  | Number x -> Float.to_string x
+  | Identifier identifier -> identifier
+  | String str -> str
+  | Number num -> Float.to_string num
   (* Keywords. *)
   | And -> "and"
   | Class -> "class"
   | Else -> "else"
   | False -> "false"
-  | Fun -> "fun"
   | For -> "for"
+  | Fun -> "fun"
   | If -> "if"
   | Nil -> "nil"
   | Or -> "or"
@@ -88,4 +88,4 @@ let to_string = function
   | Var -> "var"
   | While -> "while"
   (* End of file. *)
-  | Eof -> "<eof>"
+  | EOF -> "<eof>"

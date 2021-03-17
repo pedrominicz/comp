@@ -8,8 +8,5 @@ clean() {
   rm -rf a.out *.cm{i,o}
 }
 
-ocamlc tokenKind.ml
-ocamlc tokenKind.cmo token.ml
-ocamlc scanner.ml
-ocamlc tokenKind.cmo token.cmo scanner.cmo main.ml
+ocamlc util.ml error.ml tokenKind.ml token.ml scanner.ml main.ml
 ./a.out
