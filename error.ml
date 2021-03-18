@@ -1,8 +1,8 @@
 let had_error = ref false
 
-let report line where message =
-  Format.eprintf "[line %d] Error%s: %s\n%!" line where message;
+let report line where msg =
+  Format.eprintf "[line %d] Error%s: %s\n%!" line where msg;
   had_error := true
 
-let error line message =
-  report line "" message
+let error line msg =
+  report line "" msg

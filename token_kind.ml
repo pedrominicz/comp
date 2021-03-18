@@ -1,9 +1,9 @@
 type t =
   (* Single-character tokens. *)
-  | LeftParen
-  | RightParen
-  | LeftBrace
-  | RightBrace
+  | Left_paren
+  | Right_paren
+  | Left_brace
+  | Right_brace
   | Comma
   | Dot
   | Minus
@@ -13,13 +13,13 @@ type t =
   | Star
   (* One or two character tokens. *)
   | Bang
-  | BangEqual
+  | Bang_equal
   | Equal
-  | EqualEqual
+  | Equal_equal
   | Greater
-  | GreaterEqual
+  | Greater_equal
   | Less
-  | LessEqual
+  | Less_equal
   (* Literals. *)
   | Identifier of string
   | String of string
@@ -46,10 +46,10 @@ type t =
 
 let to_string = function
   (* Single-character tokens. *)
-  | LeftParen -> "("
-  | RightParen -> ")"
-  | LeftBrace -> "{"
-  | RightBrace -> "}"
+  | Left_paren -> "("
+  | Right_paren -> ")"
+  | Left_brace -> "{"
+  | Right_brace -> "}"
   | Comma -> ","
   | Dot -> "."
   | Minus -> "-"
@@ -59,16 +59,16 @@ let to_string = function
   | Star -> "*"
   (* One or two character tokens. *)
   | Bang -> "!"
-  | BangEqual -> "!="
+  | Bang_equal -> "!="
   | Equal -> "="
-  | EqualEqual -> "=="
+  | Equal_equal -> "=="
   | Greater -> ">"
-  | GreaterEqual -> ">="
+  | Greater_equal -> ">="
   | Less -> "<"
-  | LessEqual -> "<="
+  | Less_equal -> "<="
   (* Literals. *)
   | Identifier identifier -> identifier
-  | String str -> str
+  | String str -> "\"" ^ str ^ "\""
   | Number num -> Float.to_string num
   (* Keywords. *)
   | And -> "and"

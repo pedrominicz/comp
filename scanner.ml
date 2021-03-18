@@ -1,4 +1,4 @@
-open TokenKind
+open Token_kind
 
 let line = ref 1
 
@@ -38,10 +38,10 @@ let rec loop tokens = function
       let _, tl = Util.span (fun c -> c != '\n') tl in
       loop tokens tl
   (* Single-character tokens. *)
-  | '(' :: tl -> loop (make LeftParen :: tokens) tl
-  | ')' :: tl -> loop (make RightParen :: tokens) tl
-  | '{' :: tl -> loop (make LeftBrace :: tokens) tl
-  | '}' :: tl -> loop (make RightBrace :: tokens) tl
+  | '(' :: tl -> loop (make Left_paren :: tokens) tl
+  | ')' :: tl -> loop (make Right_paren :: tokens) tl
+  | '{' :: tl -> loop (make Left_brace :: tokens) tl
+  | '}' :: tl -> loop (make Right_brace :: tokens) tl
   | ',' :: tl -> loop (make Comma :: tokens) tl
   | '.' :: tl -> loop (make Dot :: tokens) tl
   | '-' :: tl -> loop (make Minus :: tokens) tl
@@ -50,15 +50,15 @@ let rec loop tokens = function
   | '/' :: tl -> loop (make Slash :: tokens) tl
   | '*' :: tl -> loop (make Star :: tokens) tl
   (* One or two character tokens. *)
-  | '!' :: '=' :: tl -> loop (make BangEqual :: tokens) tl
+  | '!' :: '=' :: tl -> loop (make Bang_equal :: tokens) tl
   | '!' :: tl ->        loop (make Bang :: tokens) tl
-  | '=' :: '=' :: tl -> loop (make EqualEqual :: tokens) tl
+  | '=' :: '=' :: tl -> loop (make Equal_equal :: tokens) tl
   | '=' :: tl ->        loop (make Equal :: tokens) tl
-  | '>' :: '=' :: tl -> loop (make GreaterEqual :: tokens) tl
+  | '>' :: '=' :: tl -> loop (make Greater_equal :: tokens) tl
   | '>' :: tl ->        loop (make Greater :: tokens) tl
-  | '<' :: '=' :: tl -> loop (make LessEqual :: tokens) tl
+  | '<' :: '=' :: tl -> loop (make Less_equal :: tokens) tl
   | '<' :: tl ->        loop (make Less :: tokens) tl
-  (* Keywords and literals. *)
+  (* Keywords and identifiers. *)
   | c :: _ as tl when Util.is_alpha c ->
       let identifier, tl = Util.span Util.is_alphanum tl in
       let identifier = Util.string_of_char_list identifier in
@@ -67,6 +67,7 @@ let rec loop tokens = function
         | Some keyword -> make keyword
         | None -> make (Identifier identifier) in
       loop (token :: tokens) tl
+  (* String literals. *)
   | '"' :: tl ->
       let str, tl = Util.span (fun c -> c != '"') tl in
       let str = Util.string_of_char_list str in
@@ -75,6 +76,7 @@ let rec loop tokens = function
       | [] ->
           Error.error !line "Unterminated string.";
           loop (make (String str) :: tokens) [])
+  (* Float literals. *)
   | c :: _ as tl when Util.is_digit c ->
       let num, tl = Util.span Util.is_digit tl in
       let num, tl =
@@ -85,6 +87,7 @@ let rec loop tokens = function
         | _ -> (num, tl) in
       let num = Float.of_string (Util.string_of_char_list num) in
       loop (make (Number num) :: tokens) tl
+  (* Unexpected character. *)
   | c :: tl ->
       Error.error !line "Unexpected character.";
       loop tokens tl

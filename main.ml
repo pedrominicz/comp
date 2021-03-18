@@ -1,6 +1,8 @@
 let run str =
   let tokens = Scanner.scan_tokens str in
-  List.iter (fun token -> print_endline (Token.to_string token)) tokens
+  match Parser.parse tokens with
+  | Some expr -> print_endline (Ast.expression_to_string expr)
+  | None -> ()
 
 let rec run_prompt () =
   print_string "> ";
