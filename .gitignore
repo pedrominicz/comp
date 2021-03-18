@@ -2,3 +2,4 @@
 *.cmo
 a.out
 out
+out.S
