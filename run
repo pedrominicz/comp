@@ -9,4 +9,4 @@ clean() {
 }
 
 ocamlc util.ml error.ml tokenKind.ml token.ml scanner.ml main.ml
-./a.out
+rlwrap ./a.out

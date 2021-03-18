@@ -89,13 +89,15 @@ let rec loop tokens = function
           Error.error !line "Unterminated string.";
           loop (make (String str) :: tokens) tl)
   | c :: _ as tl when Util.is_digit c ->
-      let num, tl = Util.span (fun c -> Util.is_digit c || c == '.') tl in
-      (try
-        let num = Float.of_string (Util.string_of_char_list num) in
-        loop (make (Number num) :: tokens) tl
-      with Failure _ ->
-        Error.error !line "Expected float.";
-        loop tokens tl)
+      let num, tl = Util.span Util.is_digit tl in
+      let num, tl =
+        match tl with
+        | '.' :: c :: _ as tl when Util.is_digit c ->
+            let num', tl = Util.span Util.is_digit (List.tl tl) in
+            (List.concat [num; ['.']; num'], tl)
+        | _ -> (num, tl) in
+      let num = Float.of_string (Util.string_of_char_list num) in
+      loop (make (Number num) :: tokens) tl
   | c :: tl ->
       Error.error !line "Unexpected character.";
       loop tokens tl
