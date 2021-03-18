@@ -4,9 +4,25 @@ let line = ref 1
 
 let make kind = Token.make kind !line
 
-let is_keyword_end = function
-  | c :: _ when Util.is_alphanum c -> false
-  | _ -> true
+module Map = Map.Make(String)
+
+let keywords = Map.of_seq (List.to_seq [
+  ("and", And);
+  ("class", Class);
+  ("else", Else);
+  ("false", False);
+  ("for", For);
+  ("fun", Fun);
+  ("if", If);
+  ("nil", Nil);
+  ("or", Or);
+  ("print", Print);
+  ("return", Return);
+  ("super", Super);
+  ("this", This);
+  ("true", True);
+  ("var", Var);
+  ("while", While)])
 
 let rec loop tokens = function
   (* End of file. *)
@@ -42,44 +58,15 @@ let rec loop tokens = function
   | '>' :: tl ->        loop (make Greater :: tokens) tl
   | '<' :: '=' :: tl -> loop (make LessEqual :: tokens) tl
   | '<' :: tl ->        loop (make Less :: tokens) tl
-  (* Keywords. *)
-  | 'a' :: 'n' :: 'd' :: tl when is_keyword_end tl ->
-      loop (make And :: tokens) tl
-  | 'c' :: 'l' :: 'a' :: 's' :: 's' :: tl when is_keyword_end tl ->
-      loop (make Class :: tokens) tl
-  | 'e' :: 'l' :: 's' :: 'e' :: tl when is_keyword_end tl ->
-      loop (make Else :: tokens) tl
-  | 'f' :: 'a' :: 'l' :: 's' :: 'e' :: tl when is_keyword_end tl ->
-      loop (make False :: tokens) tl
-  | 'f' :: 'o' :: 'r' :: tl when is_keyword_end tl ->
-      loop (make For :: tokens) tl
-  | 'f' :: 'u' :: 'n' :: tl when is_keyword_end tl ->
-      loop (make Fun :: tokens) tl
-  | 'i' :: 'f' :: tl when is_keyword_end tl ->
-      loop (make If :: tokens) tl
-  | 'n' :: 'i' :: 'l' :: tl when is_keyword_end tl ->
-      loop (make Nil :: tokens) tl
-  | 'o' :: 'r' :: tl when is_keyword_end tl ->
-      loop (make Or :: tokens) tl
-  | 'p' :: 'r' :: 'i' :: 'n' :: 't' :: tl when is_keyword_end tl ->
-      loop (make Print :: tokens) tl
-  | 'r' :: 'e' :: 't' :: 'u' :: 'r' :: 'n' :: tl when is_keyword_end tl ->
-      loop (make Return :: tokens) tl
-  | 's' :: 'u' :: 'p' :: 'e' :: 'r' :: tl when is_keyword_end tl ->
-      loop (make Super :: tokens) tl
-  | 't' :: 'h' :: 'i' :: 's' :: tl when is_keyword_end tl ->
-      loop (make This :: tokens) tl
-  | 't' :: 'r' :: 'u' :: 'e' :: tl when is_keyword_end tl ->
-      loop (make True :: tokens) tl
-  | 'v' :: 'a' :: 'r' :: tl when is_keyword_end tl ->
-      loop (make Var :: tokens) tl
-  | 'w' :: 'h' :: 'i' :: 'l' :: 'e' :: tl when is_keyword_end tl ->
-      loop (make While :: tokens) tl
-  (* Literals. *)
+  (* Keywords and literals. *)
   | c :: _ as tl when Util.is_alpha c ->
       let identifier, tl = Util.span Util.is_alphanum tl in
       let identifier = Util.string_of_char_list identifier in
-      loop (make (Identifier identifier) :: tokens) tl
+      let token =
+        match Map.find_opt identifier keywords with
+        | Some keyword -> make keyword
+        | None -> make (Identifier identifier) in
+      loop (token :: tokens) tl
   | '"' :: tl ->
       let str, tl = Util.span (fun c -> c != '"') tl in
       let str = Util.string_of_char_list str in
@@ -87,7 +74,7 @@ let rec loop tokens = function
       | _ :: tl -> loop (make (String str) :: tokens) tl
       | [] ->
           Error.error !line "Unterminated string.";
-          loop (make (String str) :: tokens) tl)
+          loop (make (String str) :: tokens) [])
   | c :: _ as tl when Util.is_digit c ->
       let num, tl = Util.span Util.is_digit tl in
       let num, tl =
