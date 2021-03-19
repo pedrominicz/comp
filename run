@@ -8,6 +8,6 @@ clean() {
   rm -rf a.out *.cm{i,o}
 }
 
-ocamlc util.ml error.ml token_kind.ml token.ml scanner.ml ast.ml parser.ml main.ml
-#time python test.py |./a.out >/dev/null
-rlwrap ./a.out
+ocamlc util.ml error.ml token_kind.ml token.ml scanner.ml ast.ml parser.ml value.ml interpreter.ml main.ml
+time python test.py |./a.out
+#rlwrap ./a.out

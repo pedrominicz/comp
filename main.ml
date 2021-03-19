@@ -2,7 +2,7 @@ let run str =
   let tokens = Scanner.scan_tokens str in
   match Parser.parse tokens with
   | Some expr when not !Error.had_error ->
-      print_endline (Ast.expression_to_string expr)
+      Interpreter.interpret expr
   | _ -> ()
 
 let rec run_prompt () =
@@ -14,6 +14,7 @@ let rec run_prompt () =
   | Some str ->
       run str;
       Error.had_error := false;
+      Error.had_runtime_error := false;
       run_prompt ()
 
 let run_file file =
@@ -22,7 +23,7 @@ let run_file file =
   let str = really_input_string ic n in
   close_in ic;
   run str;
-  if !Error.had_error then exit 1 else ()
+  if !Error.had_error || !Error.had_runtime_error then exit 1 else ()
 
 let () =
   match Array.length Sys.argv with

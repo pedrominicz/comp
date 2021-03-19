@@ -6,12 +6,12 @@ open Token
 exception Parse_error of Token.t list
 
 let error { kind; line } msg =
-  if kind == EOF
+  if kind = EOF
     then Error.report line " at end" msg
     else Error.report line (" at '" ^ Token_kind.to_string kind ^ "'") msg
 
 let consume kind msg = function
-  | token :: tokens when token.kind == kind -> tokens
+  | token :: tokens when token.kind = kind -> tokens
   | token :: _ as tokens ->
       error token msg;
       raise (Parse_error tokens)
