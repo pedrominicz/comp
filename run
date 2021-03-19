@@ -9,4 +9,5 @@ clean() {
 }
 
 ocamlc util.ml error.ml token_kind.ml token.ml scanner.ml ast.ml parser.ml main.ml
+#time python test.py |./a.out >/dev/null
 rlwrap ./a.out
