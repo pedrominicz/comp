@@ -3,8 +3,8 @@
 import random
 
 operators = [
-    '(', ')', '{', '}', ',', '.', '-', '+', ';', '/', '*',
-    '!', '!=', '=', '==', '>', '>=', '<', '<=',
+    '-', '+', '/', '*',
+    '!=', '==', '>', '>=', '<', '<=',
 ]
 
 # Keywords and identifiers
@@ -51,18 +51,19 @@ def unary():
     return primary()
 
 def primary():
-    if random.random() < 1 / 2:
-        return [str(random.uniform(0, 10000))]
-    if random.random() < 1 / 2:
-        return [random.choice(['true', 'false', 'nil'])]
-    if random.random() < 1 / 2:
-        return [f'"{random.choice(words)}"']
+    if random.random() < 9 / 10:
+        return [str(random.randint(0, 100))]
+    #if random.random() < 1 / 2:
+    #    return [random.choice(['true', 'false', 'nil'])]
+    #if random.random() < 1 / 2:
+    #    return [f'"{random.choice(words)}"']
     result = ['(']
     result.extend(expression())
-    if random.random() < 9 / 10:
-        result.append(')')
+    #if random.random() < 9 / 10:
+    #    result.append(')')
+    result.append(')')
     return result
 
 while True:
-    generate()
+    #generate()
     print(' '.join(expression()))
