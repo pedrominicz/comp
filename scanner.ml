@@ -51,13 +51,13 @@ let rec loop tokens = function
   | '*' :: tl -> loop (make Star :: tokens) tl
   (* One or two character tokens. *)
   | '!' :: '=' :: tl -> loop (make Bang_equal :: tokens) tl
-  | '!' :: tl ->        loop (make Bang :: tokens) tl
+  | '!' :: tl -> loop (make Bang :: tokens) tl
   | '=' :: '=' :: tl -> loop (make Equal_equal :: tokens) tl
-  | '=' :: tl ->        loop (make Equal :: tokens) tl
+  | '=' :: tl -> loop (make Equal :: tokens) tl
   | '>' :: '=' :: tl -> loop (make Greater_equal :: tokens) tl
-  | '>' :: tl ->        loop (make Greater :: tokens) tl
+  | '>' :: tl -> loop (make Greater :: tokens) tl
   | '<' :: '=' :: tl -> loop (make Less_equal :: tokens) tl
-  | '<' :: tl ->        loop (make Less :: tokens) tl
+  | '<' :: tl -> loop (make Less :: tokens) tl
   (* Keywords and identifiers. *)
   | c :: _ as tl when Util.is_alpha c ->
       let identifier, tl = Util.span Util.is_alphanum tl in

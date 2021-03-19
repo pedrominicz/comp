@@ -17,7 +17,7 @@ let consume kind msg = function
       raise (Parse_error tokens)
   | [] -> raise (Failure "Unreachable!")
 
-let many infixes k tokens =
+let binary infixes k tokens =
   let rec loop left = function
     | infix :: tokens when List.mem infix.kind infixes ->
         let right, tokens = k tokens in
@@ -30,16 +30,16 @@ let rec expression tokens =
   equality tokens
 
 and equality tokens =
-  many [Equal_equal; Bang_equal] comparison tokens
+  binary [Equal_equal; Bang_equal] comparison tokens
 
 and comparison tokens =
-  many [Greater; Greater_equal; Less; Less_equal] term tokens
+  binary [Greater; Greater_equal; Less; Less_equal] term tokens
 
 and term tokens =
-  many [Minus; Plus] factor tokens
+  binary [Minus; Plus] factor tokens
 
 and factor tokens =
-  many [Slash; Star] unary tokens
+  binary [Slash; Star] unary tokens
 
 and unary = function
   | ({ kind = (Bang | Minus) } as prefix) :: tokens ->

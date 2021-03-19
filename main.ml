@@ -1,8 +1,9 @@
 let run str =
   let tokens = Scanner.scan_tokens str in
   match Parser.parse tokens with
-  | Some expr -> print_endline (Ast.expression_to_string expr)
-  | None -> ()
+  | Some expr when not !Error.had_error ->
+      print_endline (Ast.expression_to_string expr)
+  | _ -> ()
 
 let rec run_prompt () =
   print_string "> ";
@@ -28,5 +29,5 @@ let () =
   | 1 -> run_prompt ()
   | 2 -> run_file Sys.argv.(1)
   | _ ->
-      Format.eprintf "usage: %s [script]\n" Sys.argv.(0);
+      Printf.eprintf "usage: %s [script]\n" Sys.argv.(0);
       exit 1

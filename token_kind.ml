@@ -69,7 +69,7 @@ let to_string = function
   (* Literals. *)
   | Identifier identifier -> identifier
   | String str -> "\"" ^ str ^ "\""
-  | Number num -> Float.to_string num
+  | Number num -> Util.float_to_string num
   (* Keywords. *)
   | And -> "and"
   | Class -> "class"
