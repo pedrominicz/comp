@@ -1,3 +1,3 @@
 ### Resources
 
-https://craftinginterpreters.com/scanning.html
+https://craftinginterpreters.com/

@@ -6,7 +6,7 @@ type t =
 
 let to_string = function
   | Number num -> Util.float_to_string num
-  | String str -> "\"" ^ str ^ "\""
+  | String str -> str
   | Bool bool -> Bool.to_string bool
   | Nil -> "nil"
 

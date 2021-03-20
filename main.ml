@@ -1,9 +1,7 @@
 let run str =
   let tokens = Scanner.scan_tokens str in
-  match Parser.parse tokens with
-  | Some expr when not !Error.had_error ->
-      Interpreter.interpret expr
-  | _ -> ()
+  let statements = Parser.parse tokens in
+  if not !Error.had_error then Interpreter.interpret statements
 
 let rec run_prompt () =
   print_string "> ";

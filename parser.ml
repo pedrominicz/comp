@@ -10,6 +10,13 @@ let error { kind; line } msg =
     then Error.report line " at end" msg
     else Error.report line (" at '" ^ Token_kind.to_string kind ^ "'") msg
 
+let rec synchronize = function
+  | { kind = Semicolon } :: tokens -> tokens
+  | { kind = (Class | EOF | For | Fun | If | Print | Return | Var | While) } :: _ as tokens ->
+      tokens
+  | _ :: tokens -> synchronize tokens
+  | [] -> raise (Failure "Unreachable!")
+
 let consume kind msg = function
   | token :: tokens when token.kind = kind -> tokens
   | token :: _ as tokens ->
@@ -57,10 +64,54 @@ and primary = function
       let expr, tokens = expression tokens in
       let tokens = consume Right_paren "Expect ')' after expression." tokens in
       (expr, tokens)
+  | { kind = Identifier name; line } :: tokens ->
+      (Ast.Identifier (name, line), tokens)
   | token :: _ as tokens ->
       error token "Expect expression.";
       raise (Parse_error tokens)
   | [] -> raise (Failure "Unreachable!")
 
+let statement = function
+  | { kind = Print } :: tokens ->
+      let expr, tokens = expression tokens in
+      let tokens = consume Semicolon "Expect ';' after value." tokens in
+      (Ast.Print expr, tokens)
+  | tokens ->
+      let expr, tokens = expression tokens in
+      let tokens = consume Semicolon "Expect ';' after value." tokens in
+      (Ast.Expression expr, tokens)
+
+let variable_declaration = function
+  | { kind = Identifier name; line } :: tokens ->
+      let expr, tokens =
+        match tokens with
+        | { kind = Equal } :: tokens ->
+            let expr, tokens = expression tokens in
+            (Some expr, tokens)
+        | tokens -> (None, tokens) in
+      let tokens = consume Semicolon "Expect ';' after variable declaration." tokens in
+      (Ast.Variable (name, line, expr), tokens)
+  | token :: _ as tokens ->
+      error token "Expect variable name.";
+      raise (Parse_error tokens)
+  | [] -> raise (Failure "Unreachable!")
+
+let declaration tokens =
+  try
+    let stmt, tokens =
+      match tokens with
+      | { kind = Var } :: tokens -> variable_declaration tokens
+      | tokens -> statement tokens in
+    (Some stmt, tokens)
+  with Parse_error tokens ->
+    let tokens = synchronize tokens in
+    (None, tokens)
+
 let parse tokens =
-  try let expr, _ = expression tokens in Some expr with Parse_error _ -> None
+  let rec loop statements = function
+    | { kind = EOF } :: _ -> List.rev statements
+    | tokens ->
+        match declaration tokens with
+        | Some stmt, tokens -> loop (stmt :: statements) tokens
+        | None, tokens -> loop statements tokens in
+  loop [] tokens
