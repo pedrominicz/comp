@@ -9,6 +9,11 @@ let evaluate_binary_number op left token right =
   | _ -> raise (Runtime_error (token, "Operands must be numbers."))
 
 let rec evaluate = function
+  | Ast.Identifier (name, line) ->
+      let token = Token.make (Token_kind.Identifier name) line in
+      let msg = "Undefined variable '" ^ name ^ "'." in
+      let exn () = raise (Runtime_error (token, msg)) in
+      Environment.get name exn
   | Ast.Literal literal -> Value.of_literal literal
   | Ast.Unary (token, right) -> evaluate_unary token right
   | Ast.Binary (left, token, right) -> evaluate_binary left token right
@@ -41,9 +46,15 @@ and evaluate_binary left token right =
       | _ -> raise (Runtime_error (token, "Operands must be two numbers or two strings.")))
   | _ -> raise (Failure "Unreachable!")
 
-let interpret expr =
+let execute = function
+  | Ast.Expression expr -> let _ = evaluate expr in ()
+  | Ast.Print expr -> print_endline (Value.to_string (evaluate expr))
+  | Ast.Variable (name, line, expr) ->
+      let expr = match expr with Some expr -> evaluate expr | None -> Nil in
+      Environment.env := Environment.define name expr
+
+let interpret statements =
   try
-    let value = evaluate expr in
-    print_endline (Value.to_string value)
+    List.iter execute statements
   with Runtime_error (token, msg) ->
     Error.report token.line (" at '" ^ Token.to_string token ^ "'") msg
