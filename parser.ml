@@ -5,6 +5,8 @@ open Token
 
 exception Parse_error of Token.t list
 
+let aux = List.iter (fun token -> print_endline (Token.to_string token))
+
 let error { kind; line } msg =
   if kind = EOF
     then Error.report line " at end" msg
@@ -34,7 +36,20 @@ let binary infixes k tokens =
   loop left tokens
 
 let rec expression tokens =
-  equality tokens
+  assignment tokens
+
+and assignment tokens =
+  let expr, tokens = equality tokens in
+  match tokens with
+  | ({ kind = Equal } as token) :: tokens ->
+      let value, tokens = assignment tokens in
+      (match expr with
+      | Ast.Identifier (name, line) -> 
+          (Ast.Assignment (name, line, value), tokens)
+      | expr ->
+          error token "Invalid assignment target.";
+          (expr, tokens))
+  | _ -> (expr, tokens)
 
 and equality tokens =
   binary [Equal_equal; Bang_equal] comparison tokens
@@ -63,23 +78,13 @@ and primary = function
   | { kind = Left_paren } :: tokens ->
       let expr, tokens = expression tokens in
       let tokens = consume Right_paren "Expect ')' after expression." tokens in
-      (expr, tokens)
+      (Ast.Grouping expr, tokens)
   | { kind = Identifier name; line } :: tokens ->
       (Ast.Identifier (name, line), tokens)
   | token :: _ as tokens ->
       error token "Expect expression.";
       raise (Parse_error tokens)
   | [] -> raise (Failure "Unreachable!")
-
-let statement = function
-  | { kind = Print } :: tokens ->
-      let expr, tokens = expression tokens in
-      let tokens = consume Semicolon "Expect ';' after value." tokens in
-      (Ast.Print expr, tokens)
-  | tokens ->
-      let expr, tokens = expression tokens in
-      let tokens = consume Semicolon "Expect ';' after value." tokens in
-      (Ast.Expression expr, tokens)
 
 let variable_declaration = function
   | { kind = Identifier name; line } :: tokens ->
@@ -96,7 +101,7 @@ let variable_declaration = function
       raise (Parse_error tokens)
   | [] -> raise (Failure "Unreachable!")
 
-let declaration tokens =
+let rec declaration tokens =
   try
     let stmt, tokens =
       match tokens with
@@ -107,11 +112,34 @@ let declaration tokens =
     let tokens = synchronize tokens in
     (None, tokens)
 
+and statement = function
+  | { kind = Print } :: tokens ->
+      let expr, tokens = expression tokens in
+      let tokens = consume Semicolon "Expect ';' after value." tokens in
+      (Ast.Print expr, tokens)
+  | { kind = Left_brace } :: tokens ->
+      let stmts, tokens = block [] tokens in
+      (Ast.Block stmts, tokens)
+  | tokens ->
+      let expr, tokens = expression tokens in
+      let tokens = consume Semicolon "Expect ';' after value." tokens in
+      (Ast.Expression expr, tokens)
+
+and block stmts = function
+  | { kind = (Right_brace | EOF) } :: _ as tokens ->
+      let tokens = consume Right_brace "Expect '}' after block." tokens in
+      (List.rev stmts, tokens)
+  | tokens ->
+      let stmt, tokens = declaration tokens in
+      match stmt with
+      | Some stmt -> block (stmt :: stmts) tokens
+      | None -> block stmts tokens
+
 let parse tokens =
-  let rec loop statements = function
-    | { kind = EOF } :: _ -> List.rev statements
+  let rec loop stmts = function
+    | { kind = EOF } :: _ -> List.rev stmts
     | tokens ->
         match declaration tokens with
-        | Some stmt, tokens -> loop (stmt :: statements) tokens
-        | None, tokens -> loop statements tokens in
+        | Some stmt, tokens -> loop (stmt :: stmts) tokens
+        | None, tokens -> loop stmts tokens in
   loop [] tokens
