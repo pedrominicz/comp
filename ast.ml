@@ -9,8 +9,11 @@ type expression =
   | Unary of Token.t * expression
   | Binary of expression * Token.t * expression
   | Identifier of string * int
+  | Grouping of expression
+  | Assignment of string * int * expression
 
 type statement =
   | Expression of expression
   | Print of expression
   | Variable of string * int * expression option
+  | Block of statement list

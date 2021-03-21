@@ -9,14 +9,22 @@ let evaluate_binary_number op left token right =
   | _ -> raise (Runtime_error (token, "Operands must be numbers."))
 
 let rec evaluate = function
+  | Ast.Literal literal -> Value.of_literal literal
+  | Ast.Unary (token, right) -> evaluate_unary token right
+  | Ast.Binary (left, token, right) -> evaluate_binary left token right
   | Ast.Identifier (name, line) ->
       let token = Token.make (Token_kind.Identifier name) line in
       let msg = "Undefined variable '" ^ name ^ "'." in
       let exn () = raise (Runtime_error (token, msg)) in
       Environment.get name exn
-  | Ast.Literal literal -> Value.of_literal literal
-  | Ast.Unary (token, right) -> evaluate_unary token right
-  | Ast.Binary (left, token, right) -> evaluate_binary left token right
+  | Ast.Grouping expr -> evaluate expr
+  | Ast.Assignment (name, line, expr) ->
+      let value = evaluate expr in
+      let token = Token.make (Token_kind.Identifier name) line in
+      let msg = "Undefined variable '" ^ name ^ "'." in
+      let exn () = raise (Runtime_error (token, msg)) in
+      Environment.assign name value exn;
+      value
 
 and evaluate_unary token right =
   let right = evaluate right in
@@ -46,15 +54,19 @@ and evaluate_binary left token right =
       | _ -> raise (Runtime_error (token, "Operands must be two numbers or two strings.")))
   | _ -> raise (Failure "Unreachable!")
 
-let execute = function
+let rec execute = function
   | Ast.Expression expr -> let _ = evaluate expr in ()
   | Ast.Print expr -> print_endline (Value.to_string (evaluate expr))
   | Ast.Variable (name, line, expr) ->
       let expr = match expr with Some expr -> evaluate expr | None -> Nil in
-      Environment.env := Environment.define name expr
+      Environment.define name expr
+  | Ast.Block stmts ->
+      Environment.push ();
+      List.iter execute stmts;
+      Environment.pop ()
 
-let interpret statements =
+let interpret stmts =
   try
-    List.iter execute statements
+    List.iter execute stmts
   with Runtime_error (token, msg) ->
     Error.report token.line (" at '" ^ Token.to_string token ^ "'") msg
