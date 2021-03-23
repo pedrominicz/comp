@@ -12,6 +12,7 @@ let rec evaluate = function
   | Ast.Literal literal -> Value.of_literal literal
   | Ast.Unary (token, right) -> evaluate_unary token right
   | Ast.Binary (left, token, right) -> evaluate_binary left token right
+  | Ast.LazyBinary (left, token, right) -> evaluate_lazy_binary left token right
   | Ast.Identifier (name, line) ->
       let token = Token.make (Token_kind.Identifier name) line in
       let msg = "Undefined variable '" ^ name ^ "'." in
@@ -54,6 +55,13 @@ and evaluate_binary left token right =
       | _ -> raise (Runtime_error (token, "Operands must be two numbers or two strings.")))
   | _ -> raise (Failure "Unreachable!")
 
+and evaluate_lazy_binary left token right =
+  let left = evaluate left in
+  match token.kind with
+  | Or -> if Value.is_truthy left then left else evaluate right
+  | And -> if not (Value.is_truthy left) then left else evaluate right
+  | _ -> raise (Failure "Unreachable!")
+
 let rec execute = function
   | Ast.Expression expr -> let _ = evaluate expr in ()
   | Ast.Print expr -> print_endline (Value.to_string (evaluate expr))
@@ -64,6 +72,14 @@ let rec execute = function
       Environment.push ();
       List.iter execute stmts;
       Environment.pop ()
+  | Ast.If (condition, then_branch, else_branch) ->
+      if Value.is_truthy (evaluate condition)
+        then execute then_branch
+        else Option.iter execute else_branch
+  | Ast.While (condition, body) ->
+      while Value.is_truthy (evaluate condition) do
+        execute body
+      done
 
 let interpret stmts =
   try

@@ -39,7 +39,7 @@ let rec expression tokens =
   assignment tokens
 
 and assignment tokens =
-  let expr, tokens = equality tokens in
+  let expr, tokens = logic_or tokens in
   match tokens with
   | ({ kind = Equal } as token) :: tokens ->
       let value, tokens = assignment tokens in
@@ -50,6 +50,24 @@ and assignment tokens =
           error token "Invalid assignment target.";
           (expr, tokens))
   | _ -> (expr, tokens)
+
+and logic_or tokens =
+  let rec loop left = function
+    | ({ kind = Or } as token) :: tokens ->
+        let right, tokens = logic_and tokens in
+        loop (Ast.LazyBinary (left, token, right)) tokens
+    | tokens -> (left, tokens) in
+  let left, tokens = logic_and tokens in
+  loop left tokens
+
+and logic_and tokens =
+  let rec loop left = function
+    | ({ kind = And } as token) :: tokens ->
+        let right, tokens = equality tokens in
+        loop (Ast.LazyBinary (left, token, right)) tokens
+    | tokens -> (left, tokens) in
+  let left, tokens = equality tokens in
+  loop left tokens
 
 and equality tokens =
   binary [Equal_equal; Bang_equal] comparison tokens
@@ -120,10 +138,15 @@ and statement = function
   | { kind = Left_brace } :: tokens ->
       let stmts, tokens = block [] tokens in
       (Ast.Block stmts, tokens)
-  | tokens ->
-      let expr, tokens = expression tokens in
-      let tokens = consume Semicolon "Expect ';' after value." tokens in
-      (Ast.Expression expr, tokens)
+  | { kind = If } :: tokens -> if_statement tokens
+  | { kind = While } :: tokens -> while_statement tokens
+  | { kind = For } :: tokens -> for_statement tokens
+  | tokens -> expression_statement tokens
+
+and expression_statement tokens =
+  let expr, tokens = expression tokens in
+  let tokens = consume Semicolon "Expect ';' after value." tokens in
+  (Ast.Expression expr, tokens)
 
 and block stmts = function
   | { kind = (Right_brace | EOF) } :: _ as tokens ->
@@ -134,6 +157,64 @@ and block stmts = function
       match stmt with
       | Some stmt -> block (stmt :: stmts) tokens
       | None -> block stmts tokens
+
+and if_statement tokens =
+  let tokens = consume Left_paren "Expect '(' after 'if'." tokens in
+  let condition, tokens = expression tokens in
+  let tokens = consume Right_paren "Expect ')' after if condition." tokens in
+  let then_branch, tokens = statement tokens in
+  match tokens with
+  | { kind = Else } :: tokens ->
+      let else_branch, tokens = statement tokens in
+      (Ast.If (condition, then_branch, Some else_branch), tokens)
+  | tokens -> (Ast.If (condition, then_branch, None), tokens)
+
+and while_statement tokens =
+  let tokens = consume Left_paren "Expect '(' after 'if'." tokens in
+  let condition, tokens = expression tokens in
+  let tokens = consume Right_paren "Expect ')' after if condition." tokens in
+  let body, tokens = statement tokens in
+  (Ast.While (condition, body), tokens)
+
+and for_statement tokens =
+  let tokens = consume Left_paren "Expect '(' after 'if'." tokens in
+  let init, tokens =
+    match tokens with
+    | { kind = Semicolon } :: tokens -> (None, tokens)
+    | { kind = Var } :: tokens ->
+        let init, tokens = variable_declaration tokens in
+        (Some init, tokens)
+    | tokens ->
+        let init, tokens = expression_statement tokens in
+        (Some init, tokens) in
+  let condition, tokens =
+    match tokens with
+    | { kind = Semicolon } :: tokens -> (None, tokens)
+    | tokens ->
+        let condition, tokens = expression tokens in
+        let tokens = consume Semicolon "Expect ';' after loop condition." tokens in
+        (Some condition, tokens) in
+  let increment, tokens =
+    match tokens with
+    | { kind = Right_paren } :: tokens -> (None, tokens)
+    | tokens ->
+        let increment, tokens = expression tokens in
+        let tokens = consume Right_paren "Expect ')' after for clauses." tokens in
+        (Some increment, tokens) in
+  let body, tokens = statement tokens in
+  let body =
+    match increment with
+    | Some increment -> Ast.Block [body; Ast.Expression increment]
+    | None -> body in
+  let body =
+    match condition with
+    | Some condition -> Ast.While (condition, body)
+    | None -> Ast.While (Ast.Literal (Ast.Bool true), body) in
+  let body =
+    match init with
+    | Some init -> Ast.Block [init; body]
+    | None -> body in
+  (body, tokens)
 
 let parse tokens =
   let rec loop stmts = function
