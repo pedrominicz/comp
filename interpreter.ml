@@ -2,6 +2,7 @@ open Token
 open Value
 
 exception Runtime_error of Token.t * string
+exception Return of Value.t * int
 
 let evaluate_binary_number op left token right =
   match (left, right) with
@@ -26,6 +27,15 @@ let rec evaluate = function
       let exn () = raise (Runtime_error (token, msg)) in
       Environment.assign name value exn;
       value
+  | Ast.Call (callee, token, arguments) ->
+      let callee = evaluate callee in
+      let arguments = List.map evaluate arguments in
+      match callee with
+      | Callable (arity, name, callable) ->
+          if List.length arguments <> arity
+          then raise (Runtime_error (token, "Expected " ^ Int.to_string arity ^ " arguments but got " ^ Int.to_string (List.length arguments) ^ "."));
+          callable arguments
+      | _ -> raise (Runtime_error (token, "Can only call functions and classes."))
 
 and evaluate_unary token right =
   let right = evaluate right in
@@ -80,9 +90,28 @@ let rec execute = function
       while Value.is_truthy (evaluate condition) do
         execute body
       done
+  | Ast.Function (name, args, body) ->
+      let arity = List.length args in
+      let callable args' =
+        let old_env = !Environment.env in
+        Environment.push ();
+        List.iter2 Environment.define args args';
+        let return_value =
+          try
+            List.iter execute body;
+            Value.Nil
+          with Return (return_value, _) ->
+            return_value in
+        Environment.env := old_env;
+        return_value in
+      Environment.define name (Value.Callable (arity, name, callable))
+  | Ast.Return (expr, line) -> raise (Return (evaluate expr, line))
 
 let interpret stmts =
   try
     List.iter execute stmts
-  with Runtime_error (token, msg) ->
-    Error.report token.line (" at '" ^ Token.to_string token ^ "'") msg
+  with
+  | Runtime_error (token, msg) ->
+      Error.report token.line (" at '" ^ Token.to_string token ^ "'") msg
+  | Return (_, line) ->
+      Error.error line "Unexpected return statement."
