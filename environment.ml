@@ -3,7 +3,10 @@ module Environment = Map.Make(String)
 type t =
   | Env of Value.t Environment.t * t option
 
-let env : t ref = ref (Env (Environment.empty, None))
+let env : t ref =
+  let clock =
+    Value.Callable (0, "clock", fun _ -> Value.Number (Sys.time ())) in
+  ref (Env (Environment.singleton "clock" clock, None))
 
 let push () =
   env := Env (Environment.empty, Some !env)

@@ -12,6 +12,7 @@ type expression =
   | Identifier of string * int
   | Grouping of expression
   | Assignment of string * int * expression
+  | Call of expression * Token.t * expression list
 
 type statement =
   | Expression of expression
@@ -20,3 +21,5 @@ type statement =
   | Block of statement list
   | If of expression * statement * statement option
   | While of expression * statement
+  | Function of string * string list * statement list
+  | Return of expression * int

@@ -85,7 +85,31 @@ and unary = function
   | ({ kind = (Bang | Minus) } as prefix) :: tokens ->
       let right, tokens = unary tokens in
       (Ast.Unary (prefix, right), tokens)
-  | tokens -> primary tokens
+  | tokens -> call tokens
+
+and call tokens =
+  let rec loop expr = function
+    | { kind = Left_paren } :: tokens ->
+        let expr, tokens = finish_call expr tokens in
+        loop expr tokens
+    | tokens -> (expr, tokens) in
+  let expr, tokens = primary tokens in
+  loop expr tokens
+
+and finish_call callee tokens =
+  let rec get_arguments args tokens =
+    let arg, tokens = expression tokens in
+    let args = arg :: args in
+    match tokens with
+    | { kind = Comma } :: tokens -> get_arguments args tokens
+    | tokens -> (List.rev args, tokens) in
+  let arguments, tokens =
+    match tokens with
+    | { kind = Right_paren } :: _ as tokens -> ([], tokens)
+    | tokens -> get_arguments [] tokens in
+  (* Dumb hack because `consume` doesn't return the token it matches. *)
+  let _ = consume Right_paren "Expect ')' after arguments." tokens in
+  (Ast.Call (callee, List.hd tokens, arguments), List.tl tokens)
 
 and primary = function
   | { kind = Number num } :: tokens -> (Ast.Literal (Ast.Number num), tokens)
@@ -141,6 +165,8 @@ and statement = function
   | { kind = If } :: tokens -> if_statement tokens
   | { kind = While } :: tokens -> while_statement tokens
   | { kind = For } :: tokens -> for_statement tokens
+  | { kind = Fun } :: tokens -> parse_function "function" tokens
+  | { kind = Return; line } :: tokens -> parse_return line tokens
   | tokens -> expression_statement tokens
 
 and expression_statement tokens =
@@ -215,6 +241,43 @@ and for_statement tokens =
     | Some init -> Ast.Block [init; body]
     | None -> body in
   (body, tokens)
+
+and parse_function kind = function
+  | { kind = Identifier name } :: tokens ->
+      let tokens = consume Left_paren ("Expect '(' after " ^ kind ^ " name.") tokens in
+      let rec get_arguments args tokens =
+        let arg, tokens =
+          match tokens with
+          | { kind = Identifier name } :: tokens ->
+              (name, tokens)
+          | token :: _ as tokens ->
+              error token "Expect parameter name.";
+              raise (Parse_error tokens)
+          | [] -> raise (Failure "Unreachable!") in
+        let args = arg :: args in
+        match tokens with
+        | { kind = Comma } :: tokens -> get_arguments args tokens
+        | tokens -> (List.rev args, tokens) in
+      let arguments, tokens =
+        match tokens with
+        | { kind = Right_paren } :: _ as tokens -> ([], tokens)
+        | tokens -> get_arguments [] tokens in
+      let tokens = consume Right_paren ("Expect ')' after parameters.") tokens in
+      let tokens = consume Left_brace ("Expect '{' before " ^ kind ^ " body.") tokens in
+      let body, tokens = block [] tokens in
+      (Ast.Function (name, arguments, body), tokens)
+  | token :: _ as tokens ->
+      error token ("Expect " ^ kind ^ " name.");
+      raise (Parse_error tokens)
+  | [] -> raise (Failure "Unreachable!")
+
+and parse_return line = function
+  | { kind = Semicolon } :: tokens ->
+      (Ast.Return (Ast.Literal Ast.Nil, line), tokens)
+  | tokens ->
+      let expr, tokens = expression tokens in
+      let tokens = consume Semicolon "Expect ';' after return value." tokens in
+      (Ast.Return (expr, line), tokens)
 
 let parse tokens =
   let rec loop stmts = function
