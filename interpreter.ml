@@ -31,10 +31,22 @@ let rec evaluate = function
       let callee = evaluate callee in
       let arguments = List.map evaluate arguments in
       match callee with
-      | Callable (arity, name, callable) ->
+      | Function (name, arguments', body, closure) ->
+          let arity = List.length arguments' in
           if List.length arguments <> arity
-          then raise (Runtime_error (token, "Expected " ^ Int.to_string arity ^ " arguments but got " ^ Int.to_string (List.length arguments) ^ "."));
-          callable arguments
+            then raise (Runtime_error (token, "Expected " ^ Int.to_string arity ^ " arguments but got " ^ Int.to_string (List.length arguments) ^ "."));
+          let environment = !Environment.env in
+          Environment.env := Environment.Env (closure, None);
+          Environment.push ();
+          List.iter2 Environment.define arguments' arguments;
+          let return_value =
+            try
+              List.iter execute body;
+              Value.Nil
+            with Return (return_value, _) ->
+              return_value in
+          Environment.env := environment;
+          return_value
       | _ -> raise (Runtime_error (token, "Can only call functions and classes."))
 
 and evaluate_unary token right =
@@ -72,7 +84,7 @@ and evaluate_lazy_binary left token right =
   | And -> if not (Value.is_truthy left) then left else evaluate right
   | _ -> raise (Failure "Unreachable!")
 
-let rec execute = function
+and execute = function
   | Ast.Expression expr -> let _ = evaluate expr in ()
   | Ast.Print expr -> print_endline (Value.to_string (evaluate expr))
   | Ast.Variable (name, line, expr) ->
@@ -90,21 +102,11 @@ let rec execute = function
       while Value.is_truthy (evaluate condition) do
         execute body
       done
-  | Ast.Function (name, args, body) ->
-      let arity = List.length args in
-      let callable args' =
-        let old_env = !Environment.env in
-        Environment.push ();
-        List.iter2 Environment.define args args';
-        let return_value =
-          try
-            List.iter execute body;
-            Value.Nil
-          with Return (return_value, _) ->
-            return_value in
-        Environment.env := old_env;
-        return_value in
-      Environment.define name (Value.Callable (arity, name, callable))
+  | Ast.Function (name, arguments, body) ->
+      let closure =
+        match !Environment.env with
+        | Env (current, previous) -> current in
+      Environment.define name (Value.Function (name, arguments, body, closure))
   | Ast.Return (expr, line) -> raise (Return (evaluate expr, line))
 
 let interpret stmts =

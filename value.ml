@@ -3,15 +3,15 @@ type t =
   | String of string
   | Bool of bool
   | Nil
-  | Callable of int * string * (t list -> t)
+  | Function of string * string list * Ast.statement list * (string, t) Hashtbl.t
 
 let to_string = function
   | Number num -> Util.float_to_string num
   | String str -> str
   | Bool bool -> Bool.to_string bool
   | Nil -> "nil"
-  | Callable (_, "clock", _) -> "<native fn>"
-  | Callable (_, name, _) -> "<fn " ^ name ^ ">"
+  | Function ("clock", _, _, _) -> "<native fn>"
+  | Function (name, _, _, _) -> "<fn " ^ name ^ ">"
 
 let is_truthy = function
   | Nil | Bool false -> false
