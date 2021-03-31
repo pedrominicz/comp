@@ -1,0 +1,8 @@
+*.cmi
+*.cmo
+a.out
+lexer.ml
+out
+out.S
+parser.ml
+parser.mli

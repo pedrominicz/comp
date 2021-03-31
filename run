@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -e
+
+trap clean 0 1 2 3 6
+
+clean() {
+  rm -rf Lex.hs
+}
+
+alex Lex.x
+
+time runhaskell Main.hs
+exit
+
+case "$1" in
+  *.hs) ghci -XOverloadedStrings "$1";;
+  *.x)  ghci -XOverloadedStrings 'Lex.hs';;
+  *)    echo "cannot run '$1'";;
+esac
