@@ -12,8 +12,10 @@ test s = for_ (L.lex s) print
 
 main :: IO ()
 main = do
-  test "1 hello world"
-  test "2 hello (* world *)"
-  test "3 (* hello (* world *) *)"
-  test "4 (* hello ((* world *) *)"
-  test "5 (* hello (* world *) **)"
+  test "(* hello (* world *) *) () true false 1024"
+  test "Array.create"
+  test "Array.make"
+  test "not - + -. +. *. /. = <> <= >= < > if then else let in rec ,"
+  test ". <- ;"
+  test "_"
+  test "10 10. 10.24"

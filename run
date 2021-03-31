@@ -5,12 +5,13 @@ set -e
 trap clean 0 1 2 3 6
 
 clean() {
-  rm -rf Lex.hs
+  rm -rf Lex.hs *.{hi,o}
 }
 
 alex Lex.x
 
-time runhaskell Main.hs
+ghc Main.hs -o a.out
+time ./a.out
 exit
 
 case "$1" in
