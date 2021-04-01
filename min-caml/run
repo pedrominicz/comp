@@ -23,5 +23,5 @@ EOF
 
 sed 's/Lexing\.engine/engine_/g' lexer_.ml >>lexer.ml
 
-ocamlc type.ml id.ml syntax.ml parser.mli parser.ml lexer.ml main.ml
+ocamlc type.ml id.ml syntax.ml parser.mli parser.ml lexer.ml show.ml main.ml
 rlwrap ./a.out
