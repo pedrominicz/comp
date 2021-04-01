@@ -24,3 +24,4 @@ main = do
   test "10 10. 10.24"
   test "(* (**) % (***) *) hello (* world"
   test "%"
+  test "(* こんにちは世界 *) hello world"
