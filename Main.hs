@@ -5,10 +5,13 @@ module Main where
 import Lex as L
 
 import Data.Foldable
-import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.ByteString.Lazy as B
 
 test :: B.ByteString -> IO ()
-test s = for_ (L.lex s) print
+test str =
+  case L.lex str of
+    Left pos -> print pos
+    Right lexemes -> for_ lexemes print
 
 main :: IO ()
 main = do
@@ -19,3 +22,5 @@ main = do
   test ". <- ;"
   test "_"
   test "10 10. 10.24"
+  test "(* (**) % (***) *) hello (* world"
+  test "%"
