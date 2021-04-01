@@ -1,6 +1,7 @@
 {
-module Lex (Lexeme, LexemeType, Lex.lex) where
+module Lex (Lexeme, LexemeType(..), Lex.lex) where
 
+import Data.Either.Combinators
 import qualified Data.ByteString.Lazy.Char8 as B
 }
 
@@ -18,8 +19,8 @@ tokens :-
   "true"        { mk (Bool True) }
   "false"       { mk (Bool False) }
   "not"         { mk Not }
-  $digit+ "." $digit* { float }
   $digit+       { int }
+  $digit+ "." $digit* { float }
   "-"           { mk Minus }
   "+"           { mk Plus }
   "-."          { mk MinusDot }
@@ -47,6 +48,7 @@ tokens :-
   $lower ($digit | $lower | $upper | "_")* { identifier }
 
 {
+-- `(offset, line, len, lexemeType)`
 type Lexeme = (Int, Int, Int64, LexemeType)
 
 data LexemeType
@@ -82,6 +84,7 @@ data LexemeType
   | LParen
   | RParen
   | EOF
+  | Error
   deriving (Eq, Show)
 
 alexEOF :: Alex Lexeme
@@ -89,13 +92,29 @@ alexEOF = do
   (AlexPn offset line _, _, _, _) <- alexGetInput
   return (offset, line, 0, EOF)
 
+next :: Alex Lexeme
+next = do
+  input@(_, _, _, start) <- alexGetInput
+  startCode <- alexGetStartCode
+  case alexScan input startCode of
+    AlexEOF -> alexEOF
+    AlexError (AlexPn offset line _, _, _, _) ->
+      return (offset, line, 0, Error)
+    AlexSkip input _ -> do
+      alexSetInput input
+      next
+    AlexToken input'@(_, _, _, end) _ action -> do
+      let len = end - start
+      alexSetInput input'
+      action input len
+
 -- https://github.com/simonmar/alex/blob/master/examples/haskell.x
 comment :: AlexInput -> Int64 -> Alex Lexeme
 comment _ _ = alexGetInput >>= go 1
   where
   go 0 input = do
     alexSetInput input
-    alexMonadScan
+    next
   go n input =
     case alexGetByte input of
       -- '*'
@@ -106,7 +125,7 @@ comment _ _ = alexGetInput >>= go 1
           -- '*'
           Just (42, _) -> go n input
           Just (_, input) -> go n input
-          Nothing -> fail input
+          Nothing -> alexEOF
       -- '('
       Just (40, input) ->
         case alexGetByte input of
@@ -115,11 +134,9 @@ comment _ _ = alexGetInput >>= go 1
           -- '('
           Just (40, _) -> go n input
           Just (_, input) -> go n input
-          Nothing -> fail input
+          Nothing -> alexEOF
       Just (_, input) -> go n input
-      Nothing -> fail input
-
-  fail = alexError . show
+      Nothing -> alexEOF
 
 mk :: LexemeType -> AlexInput -> Int64 -> Alex Lexeme
 mk lexemeType (AlexPn offset line _, _, _, _) len =
@@ -147,15 +164,13 @@ identifier :: AlexInput -> Int64 -> Alex Lexeme
 identifier (AlexPn offset line _, _, str, _) len =
   return (offset, line, len, Ident (B.take len str))
 
-lex :: B.ByteString -> [Lexeme]
-lex str = done $ runAlex str go
+lex :: B.ByteString -> Either (Int, Int) [Lexeme]
+lex str = fromRight' . runAlex str $ go []
   where
-  go = do
-    lexeme@(_, _, _, lexemeType) <- alexMonadScan
-    if lexemeType == EOF
-      then return []
-      else go >>= return . (lexeme :)
-
-  done (Left msg) = error msg
-  done (Right lexemes) = lexemes
+  go lexemes = do
+    lexeme@(offset, line, _, lexemeType) <- next
+    case lexemeType of
+      EOF -> return . Right $ reverse lexemes
+      Error -> return $ Left (offset, line)
+      _ -> go (lexeme : lexemes)
 }

@@ -1,5 +1,6 @@
 *.cmi
 *.cmo
+Lex.hs
 a.out
 out
 out.S
