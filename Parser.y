@@ -6,6 +6,7 @@ import qualified Syntax as S
 import qualified Type as T
 
 import Data.Maybe
+import qualified Data.ByteString.Lazy as B
 }
 
 %tokentype { L.Lexeme }
@@ -39,7 +40,6 @@ import Data.Maybe
   'let'         { (_, _, _, L.Let) }
   'in'          { (_, _, _, L.In) }
   'rec'         { (_, _, _, L.Rec) }
-  '_'           { (_, _, _, L.Underscore) }
   ','           { (_, _, _, L.Comma) }
   'Array.create' { (_, _, _, L.ArrayCreate) }
   '.'           { (_, _, _, L.Dot) }
@@ -51,9 +51,8 @@ import Data.Maybe
 
 exp :: { S.Syntax }
   : exp_                        { $1 }
-  | exp_ ';' exp                { S.Let Nothing T.Unit $1 $3 }
-  | 'let' '_' '=' exp 'in' exp  { S.Let Nothing (T.Var Nothing) $4 $6 }
-  | 'let' ident '=' exp 'in' exp { S.Let (Just $2) (T.Var Nothing) $4 $6 }
+  | exp_ ';' exp                { S.Let B.empty T.Unit $1 $3 }
+  | 'let' ident '=' exp 'in' exp { S.Let $2 (T.Var Nothing) $4 $6 }
 
 exp_ :: { S.Syntax }
   : tuple_exp                   { $1 }

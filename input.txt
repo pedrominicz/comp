@@ -1,0 +1,103 @@
+10
+Int 10
+10.
+Float 10.0
+10.24
+Float 10.2
+a.(2)
+Get (Var "a") (Int 2)
+-1
+Neg (Int 1)
+-1.
+Float -1.0
+1 + 1
+Add (Int 1) (Int 1)
+1 - 1
+Sub (Int 1) (Int 1)
+1 +. 1
+FAdd (Int 1) (Int 1)
+1 -. 1
+FSub (Int 1) (Int 1)
+1 *. 1
+FMul (Int 1) (Int 1)
+1 /. 1
+FDiv (Int 1) (Int 1)
+2 + 3 *. 4
+Add (Int 2) (FMul (Int 3) (Int 4))
+2 + 3 + 4
+Add (Add (Int 2) (Int 3)) (Int 4)
+(2 + 3) *. 4
+FMul (Add (Int 2) (Int 3)) (Int 4)
+a = b
+Eq (Var "a") (Var "b")
+a <> b
+Not (Eq (Var "a") (Var "b"))
+a <= b
+LE (Var "a") (Var "b")
+a >= b
+LE (Var "b") (Var "a")
+a < b
+Not (LE (Var "b") (Var "a"))
+a > b
+Not (LE (Var "a") (Var "b"))
+1 = 1 = true
+Eq (Eq (Int 1) (Int 1)) (Bool True)
+2. +. 2. = 2. *. 2.
+Eq (FAdd (Float 2.0) (Float 2.0)) (FMul (Float 2.0) (Float 2.0))
+-2.
+Float -2.0
+----0.
+Float 0.0
+----2
+Neg (Neg (Neg (Neg (Int 2))))
+2 + -2
+Add (Int 2) (Neg (Int 2))
+2 + -2.
+Add (Int 2) (Float -2.0)
+-2 + 2
+Add (Neg (Int 2)) (Int 2)
+-2. + 2
+Add (Float -2.0) (Int 2)
+hello world
+App (Var "hello") ([Var "world"])
+a -b
+Sub (Var "a") (Var "b")
+-a b
+Neg (App (Var "a") ([Var "b"]))
+f x y -z
+Sub (App (Var "f") ([Var "x", Var "y"])) (Var "z")
+-f x y -z
+Sub (Neg (App (Var "f") ([Var "x", Var "y"]))) (Var "z")
+1, 2, 3
+Tuple [Int 1, Int 2, Int 3]
+a, b, c
+Tuple [Var "a", Var "b", Var "c"]
+2. +. 2. = 2. *. 2., -2. + 2, -f x y -z
+Tuple [Eq (FAdd (Float 2.0) (Float 2.0)) (FMul (Float 2.0) (Float 2.0)), Add (Float -2.0) (Int 2), Sub (Neg (App (Var "f") ([Var "x", Var "y"]))) (Var "z")]
+a.(1) <- 1
+Put (Var "a") (Int 1) (Int 1)
+a.(1) <- 1 + 2
+Put (Var "a") (Int 1) (Add (Int 1) (Int 2))
+a.(1) <- 1 = 2
+Put (Var "a") (Int 1) (Eq (Int 1) (Int 2))
+a.(1) <- 1, 2
+Put (Var "a") (Int 1) (Tuple [Int 1, Int 2])
+a.(0).(1) <- 1
+Put (Get (Var "a") (Int 0)) (Int 1) (Int 1)
+a.(a.(0) <- 1) <- 1
+Put (Var "a") (Put (Var "a") (Int 0) (Int 1)) (Int 1)
+1;2;3
+Let "" (Unit) (Int 1) (Let "" (Unit) (Int 2) (Int 3))
+a.(1; 0) <- 1, 2
+Put (Var "a") (Let "" (Unit) (Int 1) (Int 0)) (Tuple [Int 1, Int 2])
+a.(a.(0) <- 1) <- 1; 2
+Let "" (Unit) (Put (Var "a") (Put (Var "a") (Int 0) (Int 1)) (Int 1)) (Int 2)
+const () 3.; 4
+Let "" (Unit) (App (Var "const") ([Unit, Float 3.0])) (Int 4)
+let x = 2 in x
+Let "x" (Var (Nothing)) (Int 2) (Var "x")
+let (a,b,c) = (1,2,3) in a
+LetTuple [("a", Var (Nothing)), ("b", Var (Nothing)), ("c", Var (Nothing))] (Tuple [Int 1, Int 2, Int 3]) (Var "a")
+let rec const x y = x in const () 3.; 4
+LetRec "const" (Var (Nothing)) [("x", Var (Nothing)), ("y", Var (Nothing))] (Var "x") (Let "" (Unit) (App (Var "const") ([Unit, Float 3.0])) (Int 4))
+%
