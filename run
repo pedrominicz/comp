@@ -13,6 +13,7 @@ happy --info Parser.y
 
 ghc Main.hs -o a.out
 time ./a.out <input.txt
+wc -l min-caml/tests1.txt
 exit
 
 case "$1" in
