@@ -9,6 +9,8 @@ import Data.Maybe
 import qualified Data.ByteString.Lazy as B
 }
 
+%expect 0
+
 %tokentype { L.Lexeme }
 
 %monad { Either (Maybe L.Lexeme) }
@@ -50,7 +52,7 @@ import qualified Data.ByteString.Lazy as B
 %%
 
 exp :: { S.Syntax }
-  : let_exp                     { $1 }
+  : let_exp %shift              { $1 }
   | let_exp ';' exp             { S.Let B.empty T.Unit $1 $3 }
 
 let_exp :: { S.Syntax }
