@@ -21,9 +21,12 @@ data Syntax
   | Eq Syntax Syntax
   | LE Syntax Syntax
   | If Syntax Syntax Syntax
-  | Let (B.ByteString, Type) Syntax Syntax
+  | Let (Maybe B.ByteString) Type Syntax Syntax
   | Var B.ByteString
-  | LetRec (B.ByteString, Type) [(B.ByteString, Type)] Syntax Syntax
+  | LetRec B.ByteString Type [(B.ByteString, Type)] Syntax Syntax
+  | App Syntax [Syntax]
+  | Tuple [Syntax]
+  | LetTuple [(B.ByteString, Type)] Syntax Syntax
   | Array Syntax Syntax
   | Get Syntax Syntax
   | Put Syntax Syntax Syntax

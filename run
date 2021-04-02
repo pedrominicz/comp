@@ -8,8 +8,8 @@ clean() {
   rm -rf Lex.hs Parse.hs *.{hi,o}
 }
 
-alex Lex.x
-happy Parse.y
+alex Lexer.x
+happy Parser.y
 
 ghc Main.hs -o a.out
 time ./a.out
@@ -17,7 +17,7 @@ exit
 
 case "$1" in
   *.hs) ghci -XOverloadedStrings "$1";;
-  *.x)  ghci -XOverloadedStrings 'Lex.hs';;
-  *.y)  ghci -XOverloadedStrings 'Parse.hs';;
+  *.x)  ghci -XOverloadedStrings 'Lexer.hs';;
+  *.y)  ghci -XOverloadedStrings 'Parser.hs';;
   *)    echo "cannot run '$1'";;
 esac
