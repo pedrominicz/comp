@@ -14,10 +14,18 @@ import qualified Data.ByteString.Lazy.Char8 as B
 
 main :: IO ()
 main = do
-  str <- B.pack <$> getLine
-  case L.lex str of
+  str <- getLine
+  case L.lex (B.pack str) of
     Left pos -> return ()
     Right lexemes -> do
       exp <- readLn
-      print $ fromRight' (P.parse lexemes) == exp
-      main
+      case (P.parse lexemes) of
+        Left lexeme -> print lexeme
+        Right result ->
+          if result == exp
+            then main
+            else do
+              putStrLn $ "expression: " ++ str
+              putStrLn $ "expected: " ++ show exp
+              putStrLn $ "got: " ++ show result
+              undefined

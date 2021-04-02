@@ -32,7 +32,7 @@ let rec show_type = function
       Printf.sprintf "Var (%s)" typ
 
 let pair (ident, typ) =
-  Printf.sprintf "(\"%s\", %s)" ident (show_type typ)
+  Printf.sprintf "(\"%s\", %s)" (show_var ident) (show_type typ)
 
 let rec syntax = function
   | Syntax.Unit -> "Unit"
@@ -59,9 +59,10 @@ let rec syntax = function
       Printf.sprintf "Let \"%s\" (%s) (%s) (%s)" ident typ exp1 exp2
   | Syntax.Var var -> Printf.sprintf "Var \"%s\"" (show_var var)
   | Syntax.LetRec ({ name = (name, typ); args; body }, exp) ->
+      let name = show_var name in
+      let typ = show_type typ in
       let args = List.map pair args in
       let args = list args in
-      let typ = show_type typ in
       let body = syntax body in
       let exp = syntax exp in
       Printf.sprintf "LetRec \"%s\" (%s) %s (%s) (%s)" name typ args body exp
