@@ -1,6 +1,9 @@
 *.cmi
 *.cmo
 Lex.hs
+Lexer.hs
+Parse.hs
+Parser.hs
 a.out
 out
 out.S

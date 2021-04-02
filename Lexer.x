@@ -1,5 +1,5 @@
 {
-module Lex (Lexeme, LexemeType(..), Lex.lex) where
+module Lexer (Lexeme, LexemeType(..), Lexer.lex) where
 
 import Data.Either.Combinators
 import qualified Data.ByteString.Lazy.Char8 as B

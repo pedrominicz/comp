@@ -1,5 +1,5 @@
 {
-module Parse where
+module Parser where
 
 import qualified Lexer as L
 import qualified Syntax as S
