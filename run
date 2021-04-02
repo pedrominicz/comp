@@ -9,7 +9,7 @@ clean() {
 }
 
 alex Lexer.x
-happy Parser.y
+happy --info Parser.y
 
 ghc Main.hs -o a.out
 time ./a.out <input.txt

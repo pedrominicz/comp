@@ -50,14 +50,29 @@ import qualified Data.ByteString.Lazy as B
 %%
 
 exp :: { S.Syntax }
-  : exp_                        { $1 }
-  | exp_ ';' exp                { S.Let B.empty T.Unit $1 $3 }
-  | 'let' ident '=' exp 'in' exp { S.Let $2 (T.Var Nothing) $4 $6 }
+  : let_exp                     { $1 }
+  | let_exp ';' exp             { S.Let B.empty T.Unit $1 $3 }
 
-exp_ :: { S.Syntax }
+let_exp :: { S.Syntax }
   : tuple_exp                   { $1 }
-  | simple_exp '.' '(' exp ')' '<-' exp_ { S.Put $1 $4 $7 }
-  | 'if' exp 'then' exp 'else' exp_ { S.If $2 $4 $6 }
+  | simple_exp '.' '(' exp ')' '<-' let_exp
+                                { S.Put $1 $4 $7 }
+  | 'if' exp 'then' exp 'else' let_exp
+                                { S.If $2 $4 $6 }
+  | 'let' ident '=' exp 'in' exp
+                                { S.Let $2 (T.Var Nothing) $4 $6 }
+  | 'let' '(' pat ')' '=' exp 'in' exp
+                                { S.LetTuple (reverse $3) $6 $8 }
+  | 'let' 'rec' ident formal_args '=' exp 'in' exp
+                                { letRecAux $3 $4 $6 $8 }
+
+pat :: { [(B.ByteString, T.Type)] }
+  : pat ',' ident               { ($3, T.Var Nothing) : $1 }
+  | ident ',' ident             { [($3, T.Var Nothing), ($1, T.Var Nothing)] }
+
+formal_args :: { [(B.ByteString, T.Type)] }
+  : ident                       { [($1, T.Var Nothing)] }
+  | formal_args ident           { ($2, T.Var Nothing) : $1 }
 
 tuple_exp :: { S.Syntax }
   : eq_exp                      { $1 }
@@ -97,7 +112,9 @@ neg_exp :: { S.Syntax }
 app_exp :: { S.Syntax }
   : simple_exp                  { $1 }
   | simple_exp actual_args      { S.App $1 (reverse $2) }
-  | 'Array.create' simple_exp simple_exp { S.Array $2 $3 }
+  | 'not' simple_exp            { S.Not $2 }
+  | 'Array.create' simple_exp simple_exp
+                                { S.Array $2 $3 }
 
 actual_args :: { [S.Syntax] }
   : simple_exp                  { [$1] }
@@ -115,6 +132,11 @@ simple_exp :: { S.Syntax }
 {
 parseError :: [L.Lexeme] -> Either (Maybe L.Lexeme) a
 parseError = Left . listToMaybe
+
+letRecAux :: B.ByteString -> [(B.ByteString, T.Type)]
+          -> S.Syntax -> S.Syntax -> S.Syntax
+letRecAux name args body exp =
+  S.LetRec name (T.Var Nothing) (reverse args) body exp
 
 floatAux :: S.Syntax -> S.Syntax
 floatAux (S.Float float) = S.Float (-float)
