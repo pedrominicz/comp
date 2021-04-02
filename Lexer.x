@@ -40,7 +40,7 @@ tokens :-
   "in"          { mk In }
   "rec"         { mk Rec }
   ","           { mk Comma }
-  "_"           { mk Underscore }
+  "_"           { mk (Ident B.empty) }
   "Array.create" | "Array.make" { mk ArrayCreate }
   "."           { mk Dot }
   "<-"          { mk LessMinus }
@@ -71,11 +71,10 @@ data LexemeType
   | If
   | Then
   | Else
-  | Ident B.ByteString 
+  | Ident B.ByteString
   | Let
   | In
   | Rec
-  | Underscore
   | Comma
   | ArrayCreate
   | Dot

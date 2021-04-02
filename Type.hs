@@ -9,4 +9,4 @@ data Type
   | Fun [Type] Type
   | Array Type
   | Var (Maybe Type)
-  deriving Show
+  deriving (Eq, Read, Show)

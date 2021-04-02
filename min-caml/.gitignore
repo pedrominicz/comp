@@ -6,3 +6,4 @@ out
 out.S
 parser.ml
 parser.mli
+tests2.txt

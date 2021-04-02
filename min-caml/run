@@ -17,11 +17,14 @@ mv lexer.ml lexer_.ml
 cat <<EOF >lexer.ml
 let engine_ a b lexbuf =
   let res = Lexing.engine a b lexbuf in
-  Printf.printf "Saw token: '%s'\n" (Lexing.lexeme lexbuf);
+  Printf.eprintf "Saw token: '%s'\n" (Lexing.lexeme lexbuf);
   res
 EOF
 
 sed 's/Lexing\.engine/engine_/g' lexer_.ml >>lexer.ml
 
 ocamlc type.ml id.ml syntax.ml parser.mli parser.ml lexer.ml show.ml main.ml
-rlwrap ./a.out
+rlwrap ./a.out <tests1.txt >tests2.txt 2>/dev/null
+
+paste -d '\n' tests1.txt tests2.txt >../input.txt
+echo '%' >>../input.txt

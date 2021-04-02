@@ -12,7 +12,7 @@ alex Lexer.x
 happy Parser.y
 
 ghc Main.hs -o a.out
-time ./a.out
+time ./a.out <input.txt
 exit
 
 case "$1" in
