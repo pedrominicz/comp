@@ -2,8 +2,8 @@
 
 module Main where
 
-import Lex as L
-import Parse as P
+import Lexer as L
+import Parser as P
 
 import Data.Foldable
 import qualified Data.ByteString.Lazy as B
@@ -26,8 +26,43 @@ main = do
   test "(* (**) % (***) *) hello (* world"
   -- Test unexpected end-of-file error.
   test ""
-  -- Should fail at "world".
-  test "(* こんにちは世界 *) hello world"
   test "2 + 3 *. 4"
   test "2 + 3 + 4"
   test "(2 + 3) *. 4"
+  putStrLn ""
+  test "a = b"
+  test "a <> b"
+  test "a <= b"
+  test "a >= b"
+  test "a < b"
+  test "a > b"
+  test "1 = 1 = true"
+  test "2. +. 2. = 2. *. 2."
+  putStrLn ""
+  test "-2."
+  test "----0."
+  test "----2"
+  test "2 + -2"
+  test "2 + -2."
+  test "-2 + 2"
+  test "-2. + 2"
+  putStrLn ""
+  test "hello world"
+  test "a -b"
+  test "-a b"
+  test "f x y -z"
+  test "-f x y -z"
+  putStrLn ""
+  test "a, b, c"
+  test "2. +. 2. = 2. *. 2., -2. + 2, -f x y -z"
+  putStrLn ""
+  test "a.(1) <- 1"
+  test "a.(1) <- 1 + 2"
+  test "a.(1) <- 1 = 2"
+  test "a.(1) <- 1, 2"
+  test "a.(0).(1) <- 1"
+  test "a.(a.(0) <- 1) <- 1"
+  putStrLn ""
+  test "1;2;3"
+  test "a.(1; 0) <- 1, 2"
+  test "a.(a.(0) <- 1) <- 1;2"
