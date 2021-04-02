@@ -5,7 +5,7 @@ set -e
 trap clean 0 1 2 3 6
 
 clean() {
-  rm -rf Lex.hs Parse.hs *.{hi,o}
+  rm -rf Lexer.hs Parser.hs *.{hi,o}
 }
 
 alex Lexer.x
