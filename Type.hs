@@ -8,5 +8,5 @@ data Type
   -- Function are *not* curried.
   | Fun [Type] Type
   | Array Type
-  | Var (Maybe Type)
+  | Var Int
   deriving (Eq, Read, Show)

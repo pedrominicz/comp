@@ -1,59 +1,56 @@
 {
-module Parser where
+module Parser (parse) where
 
 import qualified Lexer as L
 import qualified Syntax as S
 import qualified Type as T
-
-import Data.Maybe
-import qualified Data.ByteString.Lazy as B
 }
 
 %expect 0
 
 %tokentype { L.Lexeme }
 
-%monad { Either (Maybe L.Lexeme) }
-%error { parseError }
+%monad { Maybe }
+%error { const Nothing }
 
 %name parse exp
 
 %token
-  bool          { (_, _, _, L.Bool $$) }
-  int           { (_, _, _, L.Int $$) }
-  float         { (_, _, _, L.Float $$) }
-  'not'         { (_, _, _, L.Not) }
-  '-'           { (_, _, _, L.Minus) }
-  '+'           { (_, _, _, L.Plus) }
-  '-.'          { (_, _, _, L.MinusDot) }
-  '+.'          { (_, _, _, L.PlusDot) }
-  '*.'          { (_, _, _, L.AstDot) }
-  '/.'          { (_, _, _, L.SlashDot) }
-  '='           { (_, _, _, L.Equal) }
-  '<>'          { (_, _, _, L.LessGreater) }
-  '<='          { (_, _, _, L.LessEqual) }
-  '>='          { (_, _, _, L.GreaterEqual) }
-  '<'           { (_, _, _, L.Less) }
-  '>'           { (_, _, _, L.Greater) }
-  'if'          { (_, _, _, L.If) }
-  'then'        { (_, _, _, L.Then) }
-  'else'        { (_, _, _, L.Else) }
-  ident         { (_, _, _, L.Ident $$) }
-  'let'         { (_, _, _, L.Let) }
-  'in'          { (_, _, _, L.In) }
-  'rec'         { (_, _, _, L.Rec) }
-  ','           { (_, _, _, L.Comma) }
-  'Array.create' { (_, _, _, L.ArrayCreate) }
-  '.'           { (_, _, _, L.Dot) }
-  '<-'          { (_, _, _, L.LessMinus) }
-  ';'           { (_, _, _, L.Semicolon) }
-  '('           { (_, _, _, L.LParen) }
-  ')'           { (_, _, _, L.RParen) }
+  bool          { L.Bool $$ }
+  int           { L.Int $$ }
+  float         { L.Float $$ }
+  'not'         { L.Not }
+  '-'           { L.Minus }
+  '+'           { L.Plus }
+  '-.'          { L.MinusDot }
+  '+.'          { L.PlusDot }
+  '*.'          { L.AstDot }
+  '/.'          { L.SlashDot }
+  '='           { L.Equal }
+  '<>'          { L.LessGreater }
+  '<='          { L.LessEqual }
+  '>='          { L.GreaterEqual }
+  '<'           { L.Less }
+  '>'           { L.Greater }
+  'if'          { L.If }
+  'then'        { L.Then }
+  'else'        { L.Else }
+  ident         { L.Ident $$ }
+  'let'         { L.Let }
+  'in'          { L.In }
+  'rec'         { L.Rec }
+  ','           { L.Comma }
+  'Array.create' { L.ArrayCreate }
+  '.'           { L.Dot }
+  '<-'          { L.LessMinus }
+  ';'           { L.Semicolon }
+  '('           { L.LParen }
+  ')'           { L.RParen }
 %%
 
 exp :: { S.Syntax }
   : let_exp %shift              { $1 }
-  | let_exp ';' exp             { S.Let B.empty T.Unit $1 $3 }
+  | let_exp ';' exp             { S.Let "" T.Unit $1 $3 }
 
 let_exp :: { S.Syntax }
   : tuple_exp                   { $1 }
@@ -62,19 +59,19 @@ let_exp :: { S.Syntax }
   | 'if' exp 'then' exp 'else' let_exp
                                 { S.If $2 $4 $6 }
   | 'let' ident '=' exp 'in' exp
-                                { S.Let $2 (T.Var Nothing) $4 $6 }
+                                { S.Let $2 (T.Var 0) $4 $6 }
   | 'let' '(' pat ')' '=' exp 'in' exp
                                 { S.LetTuple (reverse $3) $6 $8 }
   | 'let' 'rec' ident formal_args '=' exp 'in' exp
                                 { letRecAux $3 $4 $6 $8 }
 
-pat :: { [(B.ByteString, T.Type)] }
-  : pat ',' ident               { ($3, T.Var Nothing) : $1 }
-  | ident ',' ident             { [($3, T.Var Nothing), ($1, T.Var Nothing)] }
+pat :: { [(String, T.Type)] }
+  : pat ',' ident               { ($3, T.Var 0) : $1 }
+  | ident ',' ident             { [($3, T.Var 0), ($1, T.Var 0)] }
 
-formal_args :: { [(B.ByteString, T.Type)] }
-  : ident                       { [($1, T.Var Nothing)] }
-  | formal_args ident           { ($2, T.Var Nothing) : $1 }
+formal_args :: { [(String, T.Type)] }
+  : ident                       { [($1, T.Var 0)] }
+  | formal_args ident           { ($2, T.Var 0) : $1 }
 
 tuple_exp :: { S.Syntax }
   : eq_exp                      { $1 }
@@ -132,13 +129,8 @@ simple_exp :: { S.Syntax }
   | simple_exp '.' '(' exp ')'  { S.Get $1 $4 }
 
 {
-parseError :: [L.Lexeme] -> Either (Maybe L.Lexeme) a
-parseError = Left . listToMaybe
-
-letRecAux :: B.ByteString -> [(B.ByteString, T.Type)]
-          -> S.Syntax -> S.Syntax -> S.Syntax
-letRecAux name args body exp =
-  S.LetRec name (T.Var Nothing) (reverse args) body exp
+letRecAux :: String -> [(String, T.Type)] -> S.Syntax -> S.Syntax -> S.Syntax
+letRecAux name args body exp = S.LetRec name (T.Var 0) (reverse args) body exp
 
 floatAux :: S.Syntax -> S.Syntax
 floatAux (S.Float float) = S.Float (-float)

@@ -29,9 +29,6 @@ rlwrap ./a.out <tests1.txt >tests2.txt 2>/dev/null
 paste -d '\n' tests1.txt tests2.txt >../input.txt
 echo '%' >>../input.txt
 
-pushd ..
-./run
-popd
 ../a.out <../input.txt
 
 wc -l tests1.txt
