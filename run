@@ -9,11 +9,10 @@ clean() {
 }
 
 alex Lexer.x
-happy --info Parser.y
+happy Parser.y
 
-ghc Main.hs -o a.out
-time ./a.out <input.txt
-wc -l min-caml/tests1.txt
+ghc -O2 Main.hs -o a.out
+time rlwrap ./a.out
 exit
 
 case "$1" in

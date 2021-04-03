@@ -1,11 +1,8 @@
 {
-module Lexer (Lexeme, LexemeType(..), Lexer.lex) where
-
-import Data.Either.Combinators
-import qualified Data.ByteString.Lazy.Char8 as B
+module Lexer (Lexeme(..), Lexer.lex) where
 }
 
-%wrapper "monad-bytestring"
+%wrapper "basic"
 
 $digit = [0-9]
 $lower = [a-z]
@@ -13,45 +10,42 @@ $upper = [A-Z]
 
 tokens :-
   $white+       ;
-  "(*"          { comment }
-  "("           { mk LParen }
-  ")"           { mk RParen }
-  "true"        { mk (Bool True) }
-  "false"       { mk (Bool False) }
-  "not"         { mk Not }
-  $digit+       { int }
+  --"(*"          { undefined }
+  "("           { \s -> LParen }
+  ")"           { \s -> RParen }
+  "true"        { \s -> Bool True }
+  "false"       { \s -> Bool False }
+  "not"         { \s -> Not }
+  $digit+       { \s -> Int (read s) }
   $digit+ "." $digit* { float }
-  "-"           { mk Minus }
-  "+"           { mk Plus }
-  "-."          { mk MinusDot }
-  "+."          { mk PlusDot }
-  "*."          { mk AstDot}
-  "/."          { mk SlashDot }
-  "="           { mk Equal }
-  "<>"          { mk LessGreater }
-  "<="          { mk LessEqual }
-  ">="          { mk GreaterEqual }
-  "<"           { mk Less }
-  ">"           { mk Greater }
-  "if"          { mk If }
-  "then"        { mk Then }
-  "else"        { mk Else }
-  "let"         { mk Let }
-  "in"          { mk In }
-  "rec"         { mk Rec }
-  ","           { mk Comma }
-  "_"           { mk (Ident B.empty) }
-  "Array.create" | "Array.make" { mk ArrayCreate }
-  "."           { mk Dot }
-  "<-"          { mk LessMinus }
-  ";"           { mk Semicolon }
-  $lower ($digit | $lower | $upper | "_")* { identifier }
+  "-"           { \s -> Minus }
+  "+"           { \s -> Plus }
+  "-."          { \s -> MinusDot }
+  "+."          { \s -> PlusDot }
+  "*."          { \s -> AstDot}
+  "/."          { \s -> SlashDot }
+  "="           { \s -> Equal }
+  "<>"          { \s -> LessGreater }
+  "<="          { \s -> LessEqual }
+  ">="          { \s -> GreaterEqual }
+  "<"           { \s -> Less }
+  ">"           { \s -> Greater }
+  "if"          { \s -> If }
+  "then"        { \s -> Then }
+  "else"        { \s -> Else }
+  "let"         { \s -> Let }
+  "in"          { \s -> In }
+  "rec"         { \s -> Rec }
+  ","           { \s -> Comma }
+  "_"           { \s -> Ident "" }
+  "Array.create" | "Array.make" { \s -> ArrayCreate }
+  "."           { \s -> Dot }
+  "<-"          { \s -> LessMinus }
+  ";"           { \s -> Semicolon }
+  $lower ($digit | $lower | $upper | "_")* { \s -> Ident s }
 
 {
--- `(offset, line, len, lexemeType)`
-type Lexeme = (Int, Int, Int64, LexemeType)
-
-data LexemeType
+data Lexeme
   = Bool Bool
   | Int Int
   | Float Float
@@ -71,7 +65,7 @@ data LexemeType
   | If
   | Then
   | Else
-  | Ident B.ByteString
+  | Ident String
   | Let
   | In
   | Rec
@@ -82,94 +76,21 @@ data LexemeType
   | Semicolon
   | LParen
   | RParen
-  | EOF
-  | Error
-  deriving (Eq, Show)
+  deriving Show
 
-alexEOF :: Alex Lexeme
-alexEOF = do
-  (AlexPn offset line _, _, _, _) <- alexGetInput
-  return (offset, line, 0, EOF)
+float :: String -> Lexeme
+float str =
+  if last str == '.'
+    then Float (read (init str))
+    else Float (read str)
 
-next :: Alex Lexeme
-next = do
-  input@(_, _, _, start) <- alexGetInput
-  startCode <- alexGetStartCode
-  case alexScan input startCode of
-    AlexEOF -> alexEOF
-    AlexError (AlexPn offset line _, _, _, _) ->
-      return (offset, line, 0, Error)
-    AlexSkip input _ -> do
-      alexSetInput input
-      next
-    AlexToken input'@(_, _, _, end) _ action -> do
-      let len = end - start
-      alexSetInput input'
-      action input len
-
--- https://github.com/simonmar/alex/blob/master/examples/haskell.x
-comment :: AlexInput -> Int64 -> Alex Lexeme
-comment _ _ = alexGetInput >>= go 1
+lex :: String -> Maybe [Lexeme]
+lex str = go ('\n', [], str)
   where
-  go 0 input = do
-    alexSetInput input
-    next
-  go n input =
-    case alexGetByte input of
-      -- '*'
-      Just (42, input) ->
-        case alexGetByte input of
-          -- ')'
-          Just (41, input) -> go (n - 1) input
-          -- '*'
-          Just (42, _) -> go n input
-          Just (_, input) -> go n input
-          Nothing -> alexEOF
-      -- '('
-      Just (40, input) ->
-        case alexGetByte input of
-          -- '*'
-          Just (42, input) -> go (n + 1) input
-          -- '('
-          Just (40, _) -> go n input
-          Just (_, input) -> go n input
-          Nothing -> alexEOF
-      Just (_, input) -> go n input
-      Nothing -> alexEOF
-
-mk :: LexemeType -> AlexInput -> Int64 -> Alex Lexeme
-mk lexemeType (AlexPn offset line _, _, _, _) len =
-  return (offset, line, len, lexemeType)
-
-int :: AlexInput -> Int64 -> Alex Lexeme
-int (AlexPn offset line _, _, str, _) len =
-  return (offset, line, len, Int . readInt $ B.take len str)
-  where
-  readInt str =
-    case B.readInt str of
-      Just (x, empty) -> x
-      _ -> error "unreachable"
-
-float :: AlexInput -> Int64 -> Alex Lexeme
-float (AlexPn offset line _, _, str, _) len =
-  return (offset, line, len, Float . read $ B.unpack lexeme)
-  where
-  lexeme =
-    if B.last (B.take len str) == '.'
-      then B.take (len - 1) str
-      else B.take len str
-
-identifier :: AlexInput -> Int64 -> Alex Lexeme
-identifier (AlexPn offset line _, _, str, _) len =
-  return (offset, line, len, Ident (B.take len str))
-
-lex :: B.ByteString -> Either (Int, Int) [Lexeme]
-lex str = fromRight' . runAlex str $ go []
-  where
-  go lexemes = do
-    lexeme@(offset, line, _, lexemeType) <- next
-    case lexemeType of
-      EOF -> return . Right $ reverse lexemes
-      Error -> return $ Left (offset, line)
-      _ -> go (lexeme : lexemes)
+  go input@(_, _, str) =
+    case alexScan input 0 of
+      AlexEOF -> Just []
+      AlexError _ -> Nothing
+      AlexSkip input _ -> go input
+      AlexToken input len action -> (action (take len str) :) <$> go input
 }

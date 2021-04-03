@@ -26,10 +26,8 @@ let rec show_type = function
       Printf.sprintf "Tuple (%s)" (list types)
   | Type.Array typ -> Printf.sprintf "Array (%s)" (show_type typ)
   | Type.Var typ ->
-      let show_some typ =
-        Printf.sprintf "Just (%s)" (show_type typ) in
-      let typ = Option.fold ~none:"Nothing" ~some:show_some !typ in
-      Printf.sprintf "Var (%s)" typ
+      if Option.is_some !typ then failwith "unreachable";
+      Printf.sprintf "Var 0"
 
 let pair (ident, typ) =
   Printf.sprintf "(\"%s\", %s)" (show_var ident) (show_type typ)

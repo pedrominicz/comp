@@ -2,8 +2,6 @@ module Syntax where
 
 import Type
 
-import qualified Data.ByteString.Lazy as B
-
 data Syntax
   = Unit
   | Bool Bool
@@ -21,12 +19,12 @@ data Syntax
   | Eq Syntax Syntax
   | LE Syntax Syntax
   | If Syntax Syntax Syntax
-  | Let B.ByteString Type Syntax Syntax
-  | Var B.ByteString
-  | LetRec B.ByteString Type [(B.ByteString, Type)] Syntax Syntax
+  | Let String Type Syntax Syntax
+  | Var String
+  | LetRec String Type [(String, Type)] Syntax Syntax
   | App Syntax [Syntax]
   | Tuple [Syntax]
-  | LetTuple [(B.ByteString, Type)] Syntax Syntax
+  | LetTuple [(String, Type)] Syntax Syntax
   | Array Syntax Syntax
   | Get Syntax Syntax
   | Put Syntax Syntax Syntax
