@@ -11,9 +11,9 @@ clean() {
 alex Lexer.x
 happy Parser.y
 
-ghc -O2 Main.hs -o a.out
-time rlwrap ./a.out
-exit
+#ghc Main.hs -o a.out
+#time rlwrap ./a.out
+#exit
 
 case "$1" in
   *.hs) ghci -XOverloadedStrings "$1";;
