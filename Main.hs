@@ -1,9 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main where
 
-import Lexer as L
-import Parser as P
+import qualifed Lexer as L
+import qualifed Parser as P
 
 import System.IO
 
