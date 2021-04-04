@@ -59,19 +59,19 @@ let_exp :: { S.Syntax }
   | 'if' exp 'then' exp 'else' let_exp
                                 { S.If $2 $4 $6 }
   | 'let' ident '=' exp 'in' exp
-                                { S.Let $2 (T.Var 0) $4 $6 }
+                                { S.Let $2 (T.Var (-1)) $4 $6 }
   | 'let' '(' pat ')' '=' exp 'in' exp
                                 { S.LetTuple (reverse $3) $6 $8 }
   | 'let' 'rec' ident formal_args '=' exp 'in' exp
                                 { letRecAux $3 $4 $6 $8 }
 
 pat :: { [(String, T.Type)] }
-  : pat ',' ident               { ($3, T.Var 0) : $1 }
-  | ident ',' ident             { [($3, T.Var 0), ($1, T.Var 0)] }
+  : pat ',' ident               { ($3, T.Var (-1)) : $1 }
+  | ident ',' ident             { [($3, T.Var (-1)), ($1, T.Var (-1))] }
 
 formal_args :: { [(String, T.Type)] }
-  : ident                       { [($1, T.Var 0)] }
-  | formal_args ident           { ($2, T.Var 0) : $1 }
+  : ident                       { [($1, T.Var (-1))] }
+  | formal_args ident           { ($2, T.Var (-1)) : $1 }
 
 tuple_exp :: { S.Syntax }
   : eq_exp                      { $1 }
@@ -130,7 +130,7 @@ simple_exp :: { S.Syntax }
 
 {
 letRecAux :: String -> [(String, T.Type)] -> S.Syntax -> S.Syntax -> S.Syntax
-letRecAux name args body exp = S.LetRec name (T.Var 0) (reverse args) body exp
+letRecAux name args body exp = S.LetRec name (T.Var (-1)) (reverse args) body exp
 
 floatAux :: S.Syntax -> S.Syntax
 floatAux (S.Float float) = S.Float (-float)
