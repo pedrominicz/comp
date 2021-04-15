@@ -1,37 +1,43 @@
 module Main where
 
-import Gen
-import Name
-import qualified Lexer as L
-import qualified Parser as P
-import qualified Syntax as S
+import Type
+import Typing
 
-import Control.Monad.Trans
-import Data.Maybe
-import System.IO
+import Control.Monad.State
+import qualified Data.IntMap as IM
 
-test :: String -> IO ()
-test str = do
-  let exp = fromJust . runGenT $ lift (L.lex str >>= P.parse) >>= nameTerm
-  print exp
+test :: Type -> Type -> IO ()
+test t1 t2 = print $ execStateT (unify t1 t2) IM.empty
+
+v1, v2, v3 :: Type
+v1 = Var 1
+v2 = Var 2
+v3 = Var 3
 
 main :: IO ()
 main = do
-  test "()"
-  test "true + false"
-  test "-1"
-  test "1. - -1."
-  test "-.1. +. -1."
-  test "1 -. 2 *. 3 /. 4"
-  test "1 = 2 < 3"
-  test "not true"
-  test "if () then () else ()"
-  test "let _ = () in ()"
-  test "let _ = _ in _"
-  test "a + _ + c + d"
-  test "let rec const x _ = x in (); _"
-  test "f _ _ c _ e"
-  test "let (x, _) = _, _ in ()"
-  test "Array.create _ _"
-  test "_.(_)"
-  test "_.(_) <- _"
+  test Unit Unit
+  test Bool Bool
+  test Int Int
+  test Float Float
+  test Unit Float
+  test v1 Unit
+  test Unit v1
+  test (Tuple [v1, v2]) (Tuple [Unit, Float])
+  test (Tuple [Unit, v2]) (Tuple [Unit, Float])
+  test (Tuple [Unit, v2]) (Tuple [v1, Float])
+  test (Tuple [Unit, v2]) (Fun [v1, Float] Unit)
+  test (Array v1) Unit
+  test (Array v1) (Array v2)
+  test (Array Float) (Array v2)
+  test (Tuple [v1, Int]) (Tuple [v2, v2])
+  test (Tuple [v1, v3, v3]) (Tuple [v2, v2, Int])
+  test (Tuple [v1, v3, v3]) (Tuple [v2, v2])
+  test (Fun [] Unit) (Fun [] Unit)
+  test (Fun [v1] Unit) (Fun [Int] Unit)
+  test (Fun [v1, Int] Unit) (Fun [v2, v2] Unit)
+  test (Fun [v1, v3, v3] Unit) (Fun [v2, v2, Int] Unit)
+  test (Fun [v1, v3, v3] Unit) (Fun [v2, v2] Unit)
+  test (Fun [v1, v2] Unit) (Fun [Unit, Float] Unit)
+  test (Fun [Unit, v2] Unit) (Fun [Unit, Float] Unit)
+  test (Fun [Unit, v2] Unit) (Fun [v1, Float] Unit)
