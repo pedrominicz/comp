@@ -4,8 +4,11 @@ import qualified Syntax as S
 import qualified Type as T
 
 import Control.Monad.State
+import Data.Foldable
 import Data.Traversable
 import qualified Data.IntMap as IM
+
+type Typing a = StateT (IM.IntMap T.Type) Maybe a
 
 derefType :: T.Type -> StateT (IM.IntMap T.Type) Maybe T.Type
 derefType t = case t of
@@ -73,3 +76,52 @@ occur x t = case t of
   T.Array t -> occur x t
   T.Var y | x == y -> True
   _ -> False
+
+bind :: Int -> T.Type -> StateT (IM.IntMap T.Type) Maybe ()
+bind v t = modify (IM.insert v t)
+
+apply :: T.Type -> StateT (IM.IntMap T.Type) Maybe T.Type
+apply t = case t of
+  T.Fun ts t -> do
+    ts <- traverse apply ts
+    t <- apply t
+    return $ T.Fun ts t
+  T.Tuple ts -> do
+    ts <- traverse apply ts
+    return $ T.Tuple ts
+  T.Array t -> do
+    t <- apply t
+    return $ T.Array t
+  T.Var v -> do
+    env <- get
+    case IM.lookup v env of
+      Nothing -> return $ T.Var v
+      Just t -> do
+        guard $ not (occur v t)
+        t <- apply t
+        bind v t
+        return t
+  t -> return t
+
+unify :: T.Type -> T.Type -> StateT (IM.IntMap T.Type) Maybe ()
+unify t1 t2 = do
+  t1 <- apply t1
+  t2 <- apply t2
+  case (t1, t2) of
+    (t1, t2) | t1 == t2 -> return ()
+    (T.Fun ts1 t1, T.Fun ts2 t2) -> do
+      ts <- zipExact ts1 ts2
+      traverse (uncurry unify) ts
+      unify t1 t2
+    (T.Tuple ts1, T.Tuple ts2) -> do
+      ts <- zipExact ts1 ts2
+      traverse_ (uncurry unify) ts
+    (T.Array t1, T.Array t2) -> unify t1 t2
+    (T.Var v, t) -> bind v t
+    (t, T.Var v) -> bind v t
+    _ -> mzero
+
+zipExact :: MonadPlus m => [a] -> [b] -> m [(a, b)]
+zipExact [] [] = return []
+zipExact (x:xs) (y:ys) = ((x, y) :) <$> zipExact xs ys
+zipExact _ _ = mzero
