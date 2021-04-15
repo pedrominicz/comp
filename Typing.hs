@@ -1,5 +1,6 @@
 module Typing where
 
+import Gen
 import qualified Syntax as S
 import qualified Type as T
 
@@ -7,10 +8,13 @@ import Control.Monad.State
 import Data.Foldable
 import Data.Traversable
 import qualified Data.IntMap as IM
+import qualified Data.Map as M
 
-type Typing a = StateT (IM.IntMap T.Type) Maybe a
+type Typing a = StateT (IM.IntMap T.Type, M.Map String T.Type) (GenT Maybe) a
 
-derefType :: T.Type -> StateT (IM.IntMap T.Type) Maybe T.Type
+type Env = M.Map String T.Type
+
+derefType :: T.Type -> Typing T.Type
 derefType t = case t of
   T.Fun ts t -> do
     ts <- traverse derefType ts
@@ -23,7 +27,7 @@ derefType t = case t of
     t <- derefType t
     return $ T.Array t
   T.Var x -> do
-    env <- get
+    env <- fst <$> get
     case IM.lookup x env of
       -- Uninstantiated type variables assumed to be `T.Int`.
       Nothing -> return T.Int
@@ -32,7 +36,7 @@ derefType t = case t of
         return t
   t -> return t
 
-derefTerm :: S.Syntax -> StateT (IM.IntMap T.Type) Maybe S.Syntax
+derefTerm :: S.Syntax -> Typing S.Syntax
 derefTerm e = case e of
   S.Not e -> do e <- derefTerm e; return $ S.Not e
   S.Neg e -> do e <- derefTerm e; return $ S.Neg e
@@ -77,10 +81,10 @@ occur x t = case t of
   T.Var y | x == y -> True
   _ -> False
 
-bind :: Int -> T.Type -> StateT (IM.IntMap T.Type) Maybe ()
-bind v t = modify (IM.insert v t)
+bind :: Int -> T.Type -> Typing ()
+bind v t = modify (\(env1, env2) -> (IM.insert v t env1, env2))
 
-apply :: T.Type -> StateT (IM.IntMap T.Type) Maybe T.Type
+apply :: T.Type -> Typing T.Type
 apply t = case t of
   T.Fun ts t -> do
     ts <- traverse apply ts
@@ -93,7 +97,7 @@ apply t = case t of
     t <- apply t
     return $ T.Array t
   T.Var v -> do
-    env <- get
+    env <- fst <$> get
     case IM.lookup v env of
       Nothing -> return $ T.Var v
       Just t -> do
@@ -103,7 +107,7 @@ apply t = case t of
         return t
   t -> return t
 
-unify :: T.Type -> T.Type -> StateT (IM.IntMap T.Type) Maybe ()
+unify :: T.Type -> T.Type -> Typing ()
 unify t1 t2 = do
   t1 <- apply t1
   t2 <- apply t2
@@ -126,19 +130,49 @@ zipExact [] [] = return []
 zipExact (x:xs) (y:ys) = ((x, y) :) <$> zipExact xs ys
 zipExact _ _ = mzero
 
-infer :: S.Syntax -> StateT (IM.IntMap T.Type) Maybe T.Type
-infer e = case e of
+infer :: Env -> S.Syntax -> Typing T.Type
+infer env e = case e of
   S.Unit -> return T.Unit
   S.Bool _ -> return T.Bool
   S.Int _ -> return T.Int
   S.Float _ -> return T.Float
-  S.Not e -> infer e >>= unify T.Bool >> return T.Bool
-  S.Neg e -> infer e >>= unify T.Int >> return T.Int
-  S.Add e1 e2 -> do infer e1 >>= unify T.Int; infer e2 >>= unify T.Int; return T.Int
-  S.Sub e1 e2 -> do infer e1 >>= unify T.Int; infer e2 >>= unify T.Int; return T.Int
-  S.FNeg e -> infer e >>= unify T.Float >> return T.Float
-  S.FAdd e1 e2 -> do infer e1 >>= unify T.Float; infer e2 >>= unify T.Float; return T.Float
-  S.FSub e1 e2 -> do infer e1 >>= unify T.Float; infer e2 >>= unify T.Float; return T.Float
-  S.FMul e1 e2 -> do infer e1 >>= unify T.Float; infer e2 >>= unify T.Float; return T.Float
-  S.FDiv e1 e2 -> do infer e1 >>= unify T.Float; infer e2 >>= unify T.Float; return T.Float
-  _ -> undefined
+  S.Not e -> infer env e >>= unify T.Bool >> return T.Bool
+  S.Neg e -> infer env e >>= unify T.Int >> return T.Int
+  S.Add e1 e2 -> do infer env e1 >>= unify T.Int; infer env e2 >>= unify T.Int; return T.Int
+  S.Sub e1 e2 -> do infer env e1 >>= unify T.Int; infer env e2 >>= unify T.Int; return T.Int
+  S.FNeg e -> infer env e >>= unify T.Float >> return T.Float
+  S.FAdd e1 e2 -> do infer env e1 >>= unify T.Float; infer env e2 >>= unify T.Float; return T.Float
+  S.FSub e1 e2 -> do infer env e1 >>= unify T.Float; infer env e2 >>= unify T.Float; return T.Float
+  S.FMul e1 e2 -> do infer env e1 >>= unify T.Float; infer env e2 >>= unify T.Float; return T.Float
+  S.FDiv e1 e2 -> do infer env e1 >>= unify T.Float; infer env e2 >>= unify T.Float; return T.Float
+  S.Eq e1 e2 -> do
+    t1 <- infer env e1
+    t2 <- infer env e2
+    unify t1 t2
+    return T.Bool
+  S.LE e1 e2 -> do
+    t1 <- infer env e1
+    t2 <- infer env e2
+    unify t1 t2
+    return T.Bool
+  S.If e1 e2 e3 -> do
+    infer env e1 >>= unify T.Bool
+    t2 <- infer env e2
+    t3 <- infer env e3
+    unify t2 t3
+    return t2
+  S.Let x t e1 e2 -> do
+    t1 <- infer env e1
+    unify t1 t
+    infer (M.insert x t env) e2
+  S.Var x ->
+    case M.lookup x env of
+      Just t -> return t
+      Nothing -> do
+        env <- snd <$> get
+        case M.lookup x env of
+          Just t -> return t
+          Nothing -> do
+            t <- T.Var <$> lift gen
+            modify (\(env1, env2) -> (env1, M.insert x t env2))
+            return t

@@ -1,6 +1,7 @@
 module Gen where
 
 import Control.Applicative
+import Control.Monad
 import Control.Monad.Trans
 
 newtype GenT m a = GenT { unGenT :: Int -> m (a, Int) }
@@ -38,3 +39,5 @@ instance (Alternative m, Monad m) => Alternative (GenT m) where
   empty = GenT $ const empty
 
   GenT a1 <|> GenT a2 = GenT $ \s -> a1 s <|> a2 s
+
+instance MonadPlus m => MonadPlus (GenT m)
