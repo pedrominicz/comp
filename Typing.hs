@@ -125,3 +125,20 @@ zipExact :: MonadPlus m => [a] -> [b] -> m [(a, b)]
 zipExact [] [] = return []
 zipExact (x:xs) (y:ys) = ((x, y) :) <$> zipExact xs ys
 zipExact _ _ = mzero
+
+infer :: S.Syntax -> StateT (IM.IntMap T.Type) Maybe T.Type
+infer e = case e of
+  S.Unit -> return T.Unit
+  S.Bool _ -> return T.Bool
+  S.Int _ -> return T.Int
+  S.Float _ -> return T.Float
+  S.Not e -> infer e >>= unify T.Bool >> return T.Bool
+  S.Neg e -> infer e >>= unify T.Int >> return T.Int
+  S.Add e1 e2 -> do infer e1 >>= unify T.Int; infer e2 >>= unify T.Int; return T.Int
+  S.Sub e1 e2 -> do infer e1 >>= unify T.Int; infer e2 >>= unify T.Int; return T.Int
+  S.FNeg e -> infer e >>= unify T.Float >> return T.Float
+  S.FAdd e1 e2 -> do infer e1 >>= unify T.Float; infer e2 >>= unify T.Float; return T.Float
+  S.FSub e1 e2 -> do infer e1 >>= unify T.Float; infer e2 >>= unify T.Float; return T.Float
+  S.FMul e1 e2 -> do infer e1 >>= unify T.Float; infer e2 >>= unify T.Float; return T.Float
+  S.FDiv e1 e2 -> do infer e1 >>= unify T.Float; infer e2 >>= unify T.Float; return T.Float
+  _ -> undefined
