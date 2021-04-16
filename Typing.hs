@@ -176,3 +176,27 @@ infer env e = case e of
             t <- T.Var <$> lift gen
             modify (\(env1, env2) -> (env1, M.insert x t env2))
             return t
+  S.LetRec name t args body e -> do
+    -- Instead of creating `Name.hs`, new types variables could be `gen`erated
+    -- here.
+    let env' = M.insert name t env
+    -- This may misbehave on edge cases, for example, if the the function has
+    -- multiple arguments with the same name.
+    let bodyEnv = M.fromList args `M.union` env'
+    tBody <- infer bodyEnv body
+    unify t (T.Fun (map snd args) tBody)
+    infer env' e
+  S.App fn args -> do
+    ts <- traverse (infer env) args
+    t <- T.Var <$> lift gen
+    tf <- infer env fn
+    unify tf (T.Fun ts t)
+    return t
+  S.Tuple es -> do
+    ts <- traverse (infer env) es
+    return $ T.Tuple ts
+  S.LetTuple xs es e -> do
+    ts <- infer env es
+    unify (T.Tuple (map snd xs)) ts
+    let env' = M.fromList xs `M.union` env
+    infer env' e
