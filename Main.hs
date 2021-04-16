@@ -82,3 +82,7 @@ main = do
   test "let (x, y, z) = (1, true, ()) in x"
   test "let (x, y, z) = (1, true, ()) in y"
   test "let (x, y, z) = (1, true, ()) in z"
+  test "Array.make 10 0"
+  test "x.(0)"
+  test "x.(0) <- 0"
+  test "let a = Array.make 10 0 in a.(0) <- 10"

@@ -10,9 +10,9 @@ import Data.Traversable
 import qualified Data.IntMap as IM
 import qualified Data.Map as M
 
-type Typing a = StateT (IM.IntMap T.Type, M.Map String T.Type) (GenT Maybe) a
-
 type Env = M.Map String T.Type
+
+type Typing a = StateT (IM.IntMap T.Type, Env) (GenT Maybe) a
 
 derefType :: T.Type -> Typing T.Type
 derefType t = case t of
@@ -200,3 +200,30 @@ infer env e = case e of
     unify (T.Tuple (map snd xs)) ts
     let env' = M.fromList xs `M.union` env
     infer env' e
+  S.Array e1 e2 -> do
+    t1 <- infer env e1
+    unify T.Int t1
+    t2 <- infer env e2
+    return $ T.Array t2
+  S.Get e1 e2 -> do
+    t <- T.Var <$> lift gen
+    t1 <- infer env e1
+    unify (T.Array t) t1
+    t2 <- infer env e2
+    unify T.Int t2
+    return t
+  S.Put e1 e2 e3 -> do
+    t <- infer env e3
+    t1 <- infer env e1
+    unify (T.Array t) t1
+    t2 <- infer env e2
+    unify T.Int t2
+    return T.Unit
+
+typing :: S.Syntax -> GenT Maybe (S.Syntax, Env)
+typing e = do
+  (e, (_, env)) <- flip runStateT (IM.empty, M.empty) $ do
+    t <- infer M.empty e
+    unify T.Unit t
+    derefTerm e
+  return (e, env)
