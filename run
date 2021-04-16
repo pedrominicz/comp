@@ -8,8 +8,8 @@ clean() {
   rm -rf Lexer.hs Parser.hs *.{hi,o}
 }
 
-alex Lexer.x
-happy Parser.y
+[ ! -f Lexer.hs ] && alex Lexer.x
+[ ! -f Parser.hs ] && happy Parser.y
 
 ghc Main.hs -o a.out
 time rlwrap ./a.out
