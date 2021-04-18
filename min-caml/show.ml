@@ -76,3 +76,40 @@ let rec syntax = function
   | Syntax.Array (exp1, exp2) -> Printf.sprintf "Array (%s) (%s)" (syntax exp1) (syntax exp2)
   | Syntax.Get (exp1, exp2) -> Printf.sprintf "Get (%s) (%s)" (syntax exp1) (syntax exp2)
   | Syntax.Put (exp1, exp2, exp3) -> Printf.sprintf "Put (%s) (%s) (%s)" (syntax exp1) (syntax exp2) (syntax exp3)
+
+let ident s = "\"" ^ s ^ "\""
+
+let rec kNormal = function
+  | KNormal.Unit -> "Unit"
+  | KNormal.Int int -> "Int " ^ Int.to_string int
+  | KNormal.Float float -> Printf.sprintf "Float %.01f" float
+  | KNormal.Neg var -> Printf.sprintf "Neg \"%s\"" var
+  | KNormal.Add (var1, var2) -> Printf.sprintf "Add \"%s\" \"%s\"" var1 var2
+  | KNormal.Sub (var1, var2) -> Printf.sprintf "Sub \"%s\" \"%s\"" var1 var2
+  | KNormal.FNeg var -> Printf.sprintf "FNeg \"%s\"" var
+  | KNormal.FAdd (var1, var2) -> Printf.sprintf "FAdd \"%s\" \"%s\"" var1 var2
+  | KNormal.FSub (var1, var2) -> Printf.sprintf "FSub \"%s\" \"%s\"" var1 var2
+  | KNormal.FMul (var1, var2) -> Printf.sprintf "FMul \"%s\" \"%s\"" var1 var2
+  | KNormal.FDiv (var1, var2) -> Printf.sprintf "FDiv \"%s\" \"%s\"" var1 var2
+  | KNormal.IfEq (var1, var2, then_branch, else_branch) -> Printf.sprintf "IfEq \"%s\" \"%s\" (%s) (%s)" var1 var2 (kNormal then_branch) (kNormal else_branch)
+  | KNormal.IfLE (var1, var2, then_branch, else_branch) -> Printf.sprintf "IfLE \"%s\" \"%s\" (%s) (%s)" var1 var2 (kNormal then_branch) (kNormal else_branch)
+  | KNormal.Let ((ident, _), exp1, exp2) -> Printf.sprintf "Let \"%s\" (%s) (%s)" ident (kNormal exp1) (kNormal exp2)
+  | KNormal.Var ident -> Printf.sprintf "Var \"%s\"" ident
+  | KNormal.LetRec ({ name = (name, _); args; body }, exp) ->
+      let args = list (List.map ident (List.map fst args)) in
+      Printf.sprintf "LetRec \"%s\" %s (%s) (%s)" name args (kNormal body) (kNormal exp)
+  | KNormal.App (func, args) ->
+      let args = list (List.map ident args) in
+      Printf.sprintf "App \"%s\" %s" func args
+  | KNormal.Tuple vars ->
+      let vars = list (List.map ident vars) in
+      Printf.sprintf "Tuple %s" vars
+  | KNormal.LetTuple (items, tuple, exp) ->
+      let items = list (List.map ident (List.map fst items)) in
+      Printf.sprintf "LetTuple %s \"%s\" (%s)" items tuple (kNormal exp)
+  | KNormal.Get (var1, var2) -> Printf.sprintf "Get \"%s\" \"%s\"" var1 var2
+  | KNormal.Put (var1, var2, var3) -> Printf.sprintf "Put \"%s\" \"%s\" \"%s\"" var1 var2 var3
+  | KNormal.ExtArray name -> Printf.sprintf "ExtArray \"%s\"" name
+  | KNormal.ExtFunApp (func, args) ->
+      let args = list (List.map ident args) in
+      Printf.sprintf "ExtFunApp \"%s\" %s" func args

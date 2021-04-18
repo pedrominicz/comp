@@ -3,8 +3,12 @@ let rec main () =
   match str with
   | None -> ()
   | Some str ->
-    let exp = Parser.exp Lexer.token (Lexing.from_string str) in
-    print_endline (Show.syntax exp);
+    let exp =
+      Alpha.f
+        (KNormal.f
+          (Typing.f
+            (Parser.exp Lexer.token (Lexing.from_string str)))) in
+    print_endline (Show.kNormal exp);
     main ()
 
 let () = main ()
