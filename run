@@ -12,12 +12,12 @@ clean() {
 [ ! -f Parser.hs ] && happy Parser.y
 
 ghc Main.hs -o a.out
-time rlwrap ./a.out
+time rlwrap ./a.out <input.txt
 exit
 
 case "$1" in
-  *.hs) ghci -XOverloadedStrings "$1";;
-  *.x)  ghci -XOverloadedStrings 'Lexer.hs';;
-  *.y)  ghci -XOverloadedStrings 'Parser.hs';;
+  *.hs) ghci "$1";;
+  *.x)  ghci 'Lexer.hs';;
+  *.y)  ghci 'Parser.hs';;
   *)    echo "cannot run '$1'";;
 esac
