@@ -12,4 +12,7 @@ ocamlyacc parser.mly
 ocamllex lexer.mll
 
 ocamlc type.ml id.ml syntax.ml parser.mli parser.ml lexer.ml m.ml typing.mli typing.ml s.ml kNormal.ml alpha.ml show.ml main.ml
-rlwrap ./a.out <tests2.txt
+rlwrap ./a.out <tests2.txt >out2.txt 2>/dev/null
+
+paste -d '\n' tests2.txt out2.txt >../input.txt
+echo '%' >>../input.txt

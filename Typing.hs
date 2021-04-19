@@ -225,5 +225,8 @@ typing e = do
   (e, (_, env)) <- flip runStateT (IM.empty, M.empty) $ do
     t <- infer M.empty e
     unify T.Unit t
+    (other, env) <- get
+    env <- traverse derefType env
+    put (other, env)
     derefTerm e
   return (e, env)
