@@ -11,9 +11,12 @@ clean() {
 [ ! -f Lexer.hs ] && alex Lexer.x
 [ ! -f Parser.hs ] && happy Parser.y
 
-ghc Main.hs -o a.out
-time rlwrap ./a.out <input.txt
+runhaskell Alpha.hs
 exit
+
+#ghc Main.hs -o a.out
+#time rlwrap ./a.out <input.txt
+#exit
 
 case "$1" in
   *.hs) ghci "$1";;

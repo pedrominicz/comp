@@ -3,6 +3,7 @@ module Alpha where
 import Gen
 import KNormal
 
+import Control.Monad.Identity
 import Control.Monad.Reader
 import qualified Data.Map as M
 
@@ -78,3 +79,39 @@ alpha e = runReaderT (go e) M.empty
   go (ExtFunApp x vs) = do
     vs <- traverse find vs
     return $ ExtFunApp x vs
+
+test :: KNormal -> KNormal
+test e = runIdentity . runGenT $ alpha e
+
+tests :: [KNormal]
+tests = map test
+  [ Unit
+  , Int 10
+  , Float 10
+  , Let "a" Unit Unit
+  , Neg "a"
+  , Let "a" Unit (Neg "a")
+  , Let "a" Unit (Neg "b")
+  , Let "a" Unit (Add "a" "a")
+  , Let "a" Unit (Add "a" "b")
+  , Let "a" Unit (Let "b" Unit (Add "a" "b"))
+  , Let "a" Unit (Sub "a" "a")
+  , Let "a" Unit (Sub "a" "b")
+  , Let "a" Unit (Let "b" Unit (Sub "a" "b"))
+  , Let "a" Unit (Let "b" Unit (IfEq "a" "b" Unit Unit))
+  , Let "a" Unit (Let "b" Unit (IfEq "a" "b" (Let "a" Unit (Neg "a")) Unit))
+  , Let "a" Unit (Let "a" Unit (Var "a"))
+  , LetRec "f" [] (Var "f") (Var "f")
+  , Let "a" Unit (LetRec "f" ["a"] (Var "a") (Tuple ["f", "a"]))
+  , Let "a" Unit (LetRec "f" ["a"] (Var "a") (App "f" ["a"]))
+  , Let "x" Unit (LetTuple ["a", "b", "c"] "x" (Tuple ["a", "b", "c"]))
+  , Let "a" Unit (Get "a" "a")
+  , Let "a" Unit (Put "a" "a" "a")
+  , Let "a" Unit (ExtArray "a")
+  , Let "x" Unit (LetTuple ["a", "b", "c"] "x" (ExtFunApp "a" ["a", "b", "c"]))
+  ]
+
+main :: IO ()
+main = do
+  traverse print tests
+  return ()
