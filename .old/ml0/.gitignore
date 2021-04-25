@@ -1,0 +1,13 @@
+*.cmi
+*.cmo
+*.hi
+*.o
+Lex.hs
+Lexer.hs
+Parse.hs
+Parse.info
+Parser.hs
+Parser.info
+a.out
+out
+out.S

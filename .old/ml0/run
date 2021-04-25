@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -e
+
+trap clean 0 1 2 3 6
+
+clean() {
+  rm -rf Lexer.hs Parser.hs *.{hi,o}
+}
+
+[ ! -f Lexer.hs ] && alex Lexer.x
+[ ! -f Parser.hs ] && happy Parser.y
+
+runhaskell Alpha.hs
+exit
+
+#ghc Main.hs -o a.out
+#time rlwrap ./a.out <input.txt
+#exit
+
+case "$1" in
+  *.hs) ghci "$1";;
+  *.x)  ghci 'Lexer.hs';;
+  *.y)  ghci 'Parser.hs';;
+  *)    echo "cannot run '$1'";;
+esac
