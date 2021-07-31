@@ -1,11 +1,14 @@
 #!/bin/sh
 
-set -e
-
 trap clean 0 1 2 3 6
 
 clean() {
-  rm -rf
+  rm -rf a.out
 }
 
-exit
+grep -E '(for|if|while) ' *{h,c} && exit
+
+set -e
+
+gcc -Wall -Wextra *.c
+./a.out
