@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "common.h"
+#include "compiler.h"
 #include "debug.h"
 #include "vm.h"
 
@@ -50,7 +51,7 @@ static InterpretResult run() {
 #endif
 
     uint8_t instruction;
-    switch (instruction = READ_BYTE()) {
+    switch(instruction = READ_BYTE()) {
       case OP_CONSTANT: {
         Value constant = READ_CONSTANT();
         push(constant);
@@ -74,8 +75,7 @@ static InterpretResult run() {
 #undef READ_CONSTANT
 #undef BINARY_OP
 
-InterpretResult interpret(Chunk* chunk) {
-  vm.chunk = chunk;
-  vm.ip = vm.chunk->code;
-  return run();
+InterpretResult interpret(const char* source) {
+  compile(source);
+  return INTERPRET_OK;
 }

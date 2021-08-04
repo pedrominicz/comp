@@ -6,9 +6,9 @@ clean() {
   rm -rf a.out
 }
 
-grep -E '(for|if|while) ' *{h,c} && exit
+grep -E '(for|if|switch|while) \(' *{h,c} && exit
 
 set -e
 
 gcc -Wall -Wextra *.c
-./a.out
+rlwrap ./a.out
