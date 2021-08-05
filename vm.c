@@ -7,15 +7,15 @@
 
 VM vm; 
 
-static void resetStack() {
+static void resetStack(void) {
   vm.stackTop = vm.stack;
 }
 
-void initVM() {
+void initVM(void) {
   resetStack();
 }
 
-void freeVM() {
+void freeVM(void) {
 }
 
 void push(Value value) {
@@ -23,7 +23,7 @@ void push(Value value) {
   vm.stackTop++;
 }
 
-Value pop() {
+Value pop(void) {
   vm.stackTop--;
   return *vm.stackTop;
 }
@@ -37,7 +37,7 @@ Value pop() {
       push(a op b); \
     } while(false)
 
-static InterpretResult run() {
+static InterpretResult run(void) {
   for(;;) {
 #ifdef DEBUG_TRACE_EXECUTION
     printf("          ");
@@ -76,6 +76,19 @@ static InterpretResult run() {
 #undef BINARY_OP
 
 InterpretResult interpret(const char* source) {
-  compile(source);
-  return INTERPRET_OK;
+  Chunk chunk;
+  initChunk(&chunk);
+
+  if(!compile(source, &chunk)) {
+    freeChunk(&chunk);
+    return INTERPRET_COMPILE_ERROR;
+  }
+
+  vm.chunk = &chunk;
+  vm.ip = vm.chunk->code;
+
+  InterpretResult result = run();
+
+  freeChunk(&chunk);
+  return result;
 }
