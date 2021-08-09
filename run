@@ -12,3 +12,4 @@ set -e
 
 gcc -Wall -Wextra *.c
 rlwrap ./a.out
+rm -f a.out
