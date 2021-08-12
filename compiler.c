@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "compiler.h"
+#include "memory.h"
 #include "scanner.h"
 
 #ifdef DEBUG_PRINT_CODE
@@ -357,7 +358,7 @@ static void defineVariable(uint8_t global) {
   emitBytes(OP_DEFINE_GLOBAL, global);
 }
 
-static uint8_t argumentList() {
+static uint8_t argumentList(void) {
   uint8_t argCount = 0;
   if(!check(TOKEN_RIGHT_PAREN)) {
     do {
@@ -609,7 +610,7 @@ static void function(FunctionType type) {
   }
 }
 
-static void funDeclaration() {
+static void funDeclaration(void) {
   uint8_t global = parseVariable("Expect function name.");
   markInitialized();
   function(TYPE_FUNCTION);
@@ -635,7 +636,7 @@ static void expressionStatement(void) {
   emitByte(OP_POP);
 }
 
-static void forStatement() {
+static void forStatement(void) {
   beginScope();
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
   if(match(TOKEN_SEMICOLON)) {
@@ -704,7 +705,7 @@ static void printStatement(void) {
   emitByte(OP_PRINT);
 }
 
-static void returnStatement() {
+static void returnStatement(void) {
   if(current->type == TYPE_SCRIPT) {
     error("Can't return from top-level code.");
   }
@@ -804,4 +805,12 @@ ObjFunction* compile(const char* source) {
 
   ObjFunction* function = endCompiler();
   return parser.hadError ? NULL : function;
+}
+
+void markCompilerRoots(void) {
+  Compiler* compiler = current;
+  while(compiler != NULL) {
+    markObject((Obj*)compiler->function);
+    compiler = compiler->enclosing;
+  }
 }
