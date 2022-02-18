@@ -1,0 +1,15 @@
+#!/bin/sh
+
+trap clean 0 1 2 3 6
+
+clean() {
+  rm -rf a.out
+}
+
+grep -E '(for|if|switch|while) \(' *{h,c} && exit
+
+set -e
+
+gcc -Wall -Wextra *.c
+rlwrap ./a.out
+rm -f a.out
