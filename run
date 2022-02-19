@@ -3,7 +3,11 @@
 trap clean 0 1 2 3 6
 
 clean() {
-  true
+  rm a.out
 }
 
 set -e
+
+gcc -Wall -Wextra mandel_jit.c
+#./a.out '*bb+ab' |feh -
+time ./a.out '*bb+ab' >/dev/null
