@@ -3,11 +3,9 @@
 trap clean 0 1 2 3 6
 
 clean() {
-  rm a.out
+  rm -f forth
 }
 
 set -e
-
-gcc -Wall -Wextra mandel_jit.c
-#./a.out '*bb+ab' |feh -
-time ./a.out '*bb+ab' >/dev/null
+gcc -m32 -nostdlib -static -o forth forth.S
+cat forth.f - |./forth
