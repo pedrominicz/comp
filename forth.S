@@ -146,7 +146,7 @@ code_\label:
         NEXT
 
         defcode "?dup", 4, qdup
-        mov (%esp), %eax        // duplicate top of stack if non-zero
+        mov (%esp), %eax        // Duplicate top of stack if non-zero.
         test %eax, %eax
         jz 1f
         push %eax
@@ -313,6 +313,16 @@ code_\label:
 
         defcode "invert", 6, invert // Bitwise `not`.
         notl (%esp)
+        NEXT
+
+        defcode "lshift", 6, lshift
+        pop %ecx
+        shll %cl, (%esp)
+        NEXT
+
+        defcode "rshift", 6, rshift
+        pop %ecx
+        shrl %cl, (%esp)
         NEXT
 
         defcode "exit", 4, exit
