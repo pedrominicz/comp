@@ -1,0 +1,11 @@
+#!/bin/sh
+
+trap clean 0 1 2 3 6
+
+clean() {
+  rm -f forth
+}
+
+set -e
+gcc -m32 -nostdlib -static -o forth forth.S
+cat forth.f - |./forth
