@@ -2,8 +2,25 @@
 
 set -e
 
+trap clean 0 1 2 3 6
+
+clean() {
+  rm -f a.out *.{hi,o}
+}
+
+#time swipl -c generate_test.pl --stand_alone=true --goal=main -o a.out
+#time ./a.out >test.txt
+#exit
+
+#ghc -Wall -Wno-name-shadowing -O2 -ddump-to-file -ddump-simpl -dsuppress-all -fforce-recomp -c Eval.hs
+#ghc -Wall -Wno-name-shadowing -O2 -prof -fprof-auto -rtsopts -o a.out Main.hs
+ghc -Wall -Wno-name-shadowing -O2 -o a.out Main.hs
+./a.out <./test/check.txt
+exit
+
 case "$1" in
   Main.hs)  runhaskell Main.hs;;
   *.hs)     ghci "$1";;
+  *.pl)     swipl "$1";;
   *)        echo "cannot run '$1'";;
 esac
