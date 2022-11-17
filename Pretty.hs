@@ -1,28 +1,17 @@
-module Pretty where
+module Pretty (pretty) where
 
 import Expr
 
-import Data.Maybe
-
 pretty :: Expr -> String
-pretty e = fromMaybe (expr 0 e) (num e)
+pretty = expr 0
   where
-  num :: Expr -> Maybe String
-  num (Lam (Lam e)) = show <$> go e
-    where
-    go :: Expr -> Maybe Int
-    go (Var 0) = Just 0
-    go (App (Var 1) e) = succ <$> go e
-    go _ = Nothing
-  num _ = Nothing
-
   expr :: Int -> Expr -> String
   expr k (Lam b) = "λ " ++ vars !! k ++ ", " ++ expr (k + 1) b
-  expr k e = app k e
+  expr k e = application k e
 
-  app :: Int -> Expr -> String
-  app k (App f a) = app k f ++ " " ++ simple k a
-  app k e = simple k e
+  application :: Int -> Expr -> String
+  application k (App f a) = application k f ++ " " ++ simple k a
+  application k e = simple k e
 
   simple :: Int -> Expr -> String
   simple k (Var x) = vars !! (k - x - 1)

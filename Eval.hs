@@ -5,6 +5,8 @@ module Eval (eval) where
 
 import Expr
 
+import Unsafe.Coerce
+
 data Closure
   = Closure (ExprF 'True) Env
   | Level Int
@@ -25,9 +27,7 @@ type Stack = [Closure]
 type State = (Closure, Stack, Int)
 
 compile :: ExprF 'False -> ExprF 'True
-compile (Var x) = Var x
-compile (Lam b) = Lam (compile b)
-compile (App f a) = App (compile f) (compile a)
+compile = unsafeCoerce
 
 -- Crégut's strongly reducing Krivine abstract machine as described in Deriving
 -- the Full-Reducing Krivine Machine from the Small-Step Operational Semantics

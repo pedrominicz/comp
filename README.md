@@ -8,3 +8,4 @@ Understand and write an abstract machine for executing functional programs. Shou
 - [Improving the Lazy Krivine Machine](https://legacy.cs.indiana.edu/ftp/techreports/TR581.pdf)
 - [The Compiler Backend: Bytecode and Native code](https://dev.realworldocaml.org/compiler-backend.html)
 - [Memory Representation of Values](https://dev.realworldocaml.org/runtime-memory-layout.html)
+- [Haskell Benchmarking, Profiling, and Optimization](https://www.youtube.com/watch?v=vR_5F-kRIlY)
