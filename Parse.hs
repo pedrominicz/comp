@@ -24,17 +24,17 @@ lam = do
   x <- name
   symbol ','
   b <- local (x :) expr
-  pure (Lam b)
+  return (Lam b)
 
 app :: Parser Expr
-app = (parens expr <|> var <|> num) `chainl1` pure App
+app = (parens expr <|> var <|> num) `chainl1` return App
 
 var :: Parser Expr
 var = do
   x <- name
   env <- ask
   case elemIndex x env of
-    Just x -> pure (Var x)
+    Just x -> return (Var x)
     Nothing -> mzero
 
 num :: Parser Expr
@@ -51,7 +51,7 @@ name = do
   c <- letter
   cs <- many alphaNum
   spaces
-  pure (c:cs)
+  return (c:cs)
 
 parens :: Parser a -> Parser a
 parens = between (symbol '(') (symbol ')')

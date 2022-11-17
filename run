@@ -12,11 +12,17 @@ clean() {
 #time ./a.out >test.txt
 #exit
 
-#ghc -Wall -Wno-name-shadowing -O2 -ddump-to-file -ddump-simpl -dsuppress-all -fforce-recomp -c Eval.hs
-#ghc -Wall -Wno-name-shadowing -O2 -prof -fprof-auto -rtsopts -o a.out Main.hs
-ghc -Wall -Wno-name-shadowing -O2 -o a.out Main.hs
-./a.out <./test/check.txt
-exit
+alias ghc='ghc -Wall -Wno-name-shadowing -O2 -o a.out'
+
+#ghc -ddump-to-file -ddump-simpl -dsuppress-all -fforce-recomp -c Eval.hs
+#ghc -prof -fprof-auto -rtsopts Main.hs
+#ghc Main.hs
+#./a.out  <./test/check.txt
+#exit
+
+#ghc -dynamic -main-is Test.main Test.hs
+#./a.out --csv bench.csv --output bench.html
+#exit
 
 case "$1" in
   Main.hs)  runhaskell Main.hs;;

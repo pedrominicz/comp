@@ -25,9 +25,7 @@ pretty e = fromMaybe (expr 0 e) (num e)
   app k e = simple k e
 
   simple :: Int -> Expr -> String
-  simple k (Var x) =
-    let i = k - x - 1 in
-    if i < 0 then show (-i - 1) else vars !! i
+  simple k (Var x) = vars !! (k - x - 1)
   simple k e = "(" ++ expr k e ++ ")"
 
   -- May explode.

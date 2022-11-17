@@ -1,19 +1,17 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
-module Expr where
+module Expr (Expr, ExprF(..)) where
 
-import Data.Kind
+import Control.DeepSeq
+import GHC.Generics
 
-data ExprF :: Bool -> Type where
-  Var :: Int -> ExprF a
-  Lam :: ExprF a -> ExprF a
-  App :: ExprF a -> ExprF a -> ExprF a
-
-deriving instance Eq (ExprF a)
-
-deriving instance Show (ExprF a)
+data ExprF (b :: Bool)
+  = Var Int
+  | Lam (ExprF b)
+  | App (ExprF b) (ExprF b)
+  deriving (Eq, Generic, NFData, Show)
 
 type Expr = ExprF 'False
