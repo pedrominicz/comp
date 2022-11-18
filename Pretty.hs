@@ -17,6 +17,5 @@ pretty = expr 0
   simple k (Var x) = vars !! (k - x - 1)
   simple k e = "(" ++ expr k e ++ ")"
 
-  -- May explode.
   vars :: [String]
-  vars = map return ['a'..'z']
+  vars = map return ['a'..'z'] ++ [x : show i | i <- [(1 :: Int)..], x <- ['a'..'z']]

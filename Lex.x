@@ -1,13 +1,11 @@
 {
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Lex (Token(..), lexer) where
+
+import Data.Word
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 }
-
-%wrapper "strict-bytestring"
 
 $alpha = [A-Za-z]
 $digit = [0-9]
@@ -24,6 +22,13 @@ tokens :-
   "--" [^\n\r]* ;
 
 {
+type Byte = Word8
+
+type AlexInput = ByteString
+
+alexGetByte :: AlexInput -> Maybe (Byte, AlexInput)
+alexGetByte = B.uncons
+
 data Token
   = Var ByteString
   | Lam
@@ -32,13 +37,11 @@ data Token
   | RParen
 
 lexer :: ByteString -> Maybe [Token]
-lexer str = go (AlexInput '\n' str 0)
-  where
-  go :: AlexInput -> Maybe [Token]
-  go input@(AlexInput _ str _) =
-    case alexScan input 0 of
-      AlexEOF -> Just []
-      AlexError _ -> Nothing
-      AlexSkip input _ -> go input
-      AlexToken input len action -> (action (B.take len str) :) <$> go input
+lexer input =
+  case alexScan input 0 of
+    AlexEOF -> Just []
+    AlexError _ -> Nothing
+    AlexSkip input _ -> lexer input
+    AlexToken input' len action ->
+      (action (B.take len input) :) <$> lexer input'
 }
