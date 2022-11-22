@@ -30,7 +30,7 @@ alexGetByte :: AlexInput -> Maybe (Byte, AlexInput)
 alexGetByte = B.uncons
 
 data Token
-  = Var ByteString
+  = Var {-# UNPACK #-} !ByteString
   | Lam
   | Comma
   | LParen

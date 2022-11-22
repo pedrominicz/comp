@@ -1,24 +1,22 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Eval (eval) where
 
 import Expr
 
-import Unsafe.Coerce
-
 type Level = Int
 
 data Closure
-  = Closure (ExprF 'True) Env
-  | Level Level
-  | Expr (ExprF 'False) Level
+  = Closure Expr Env
+  | Level {-# UNPACK #-} !Level
+  | Expr Expr {-# UNPACK #-} !Level
   deriving Show
 
 pattern Lambda :: Closure
 pattern Lambda <- Level _
   where
-  Lambda = Level (error "unreachable")
+  Lambda = Level 0
 
 {-# COMPLETE Closure, Lambda, Expr #-}
 
@@ -28,14 +26,11 @@ type Stack = [Closure]
 
 type State = (Closure, Stack, Level)
 
-compile :: ExprF 'False -> ExprF 'True
-compile = unsafeCoerce
-
 -- Crégut's strongly reducing Krivine abstract machine as described in Deriving
 -- the Full-Reducing Krivine Machine from the Small-Step Operational Semantics
 -- of Normal Order.
-step :: State -> State
-step (Closure e env, s, l) =
+step :: State -> Maybe State
+step (Closure e env, s, l) = Just $
   case e of
     -- Unbound variables throw exceptions.
     Var x -> (env !! x, s, l)
@@ -44,21 +39,24 @@ step (Closure e env, s, l) =
         c@(Closure _ _) : s -> (Closure b (c : env), s, l)
         _ -> (Closure b (Level (l + 1) : env), Lambda : s, l + 1)
     App f a -> (Closure f env, Closure a env : s, l)
-step (Level l', s, l) = (Expr (Var (l - l')) l, s, l)
-step (Expr e l', c : s, l) =
+step (Level l', s, l) = Just (Expr (Var (l - l')) l, s, l)
+step (Expr e l', c : s, l) = Just $
   case c of
     Closure _ _ -> (c, Expr e l' : s, l')
     Lambda -> (Expr (Lam e) l', s, l)
     Expr e' l' -> (Expr (App e' e) l', s, l)
 -- Final state.
-step (Expr _ _, [], _) = error "unreachable"
+step (Expr _ _, [], _) = Nothing
 
-final :: State -> Bool
-final (Expr _ _, [], _) = True
-final _ = False
+-- https://hackage.haskell.org/package/zippers-0.3.2/docs/src/Control.Zipper.Internal.html#farthest
+farthest :: forall a. (a -> Maybe a) -> a -> a
+farthest f = go
+  where
+  go :: a -> a
+  go x = maybe x go (f x)
 
 eval :: Expr -> Expr
 eval e =
-  case until final step (Closure (compile e) [], [], 0) of
+  case farthest step (Closure e [], [], 0) of
     (Expr e _, _, _) -> e
     _ -> error "unreachable"

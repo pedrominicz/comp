@@ -45,8 +45,8 @@ arguments :: { [ByteString] }
 
 {
 data Expr
-  = Var ByteString
-  | Lam ByteString Expr
+  = Var {-# UNPACK #-} !ByteString
+  | Lam {-# UNPACK #-} !ByteString Expr
   | App Expr Expr
 
 nameless :: Expr -> Maybe E.Expr
