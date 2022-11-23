@@ -5,14 +5,14 @@ set -e
 trap clean 0 1 2 3 6
 
 clean() {
-  rm -f Lex.hs Parse.hs a.out *.{hi,o}
+  rm -f Lex.hs Parse.hs a.out {,Eval/}*.{hi,o}
 }
 
 #time swipl -c generate_test.pl --stand_alone=true --goal=main -o a.out
 #time ./a.out >test.txt
 #exit
 
-alias ghc='ghc -Wall -Wno-name-shadowing -O2 -o a.out'
+alias ghc='ghc -Wall -Wno-name-shadowing -O2 -rtsopts -with-rtsopts=-M4g -o a.out'
 
 alex Lex.x
 happy -acg Parse.y
@@ -23,7 +23,7 @@ happy -acg Parse.y
 
 #ghc -prof -fprof-auto -rtsopts -with-rtsopts=-p Main.hs
 #ghc Main.hs
-#./a.out  <./test/check.txt
+#./a.out <./test/check.txt
 #profiteur a.out.prof
 #exit
 

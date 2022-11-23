@@ -1,8 +1,8 @@
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Eval (eval) where
 
+import Eval.Common (farthest)
 import Expr
 
 type Level = Int
@@ -47,13 +47,6 @@ step (Expr e l', c : s, l) = Just $
     Expr e' l' -> (Expr (App e' e) l', s, l)
 -- Final state.
 step (Expr _ _, [], _) = Nothing
-
--- https://hackage.haskell.org/package/zippers-0.3.2/docs/src/Control.Zipper.Internal.html#farthest
-farthest :: forall a. (a -> Maybe a) -> a -> a
-farthest f = go
-  where
-  go :: a -> a
-  go x = maybe x go (f x)
 
 eval :: Expr -> Expr
 eval e =

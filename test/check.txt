@@ -358,7 +358,7 @@
 \a,\b,\c,\d,\e,\f,\g,g (\h,\i,a (\j,g)) g f g
 \a,(\b,\c,c) (a ((\b,b b) (\b,b b))) (\b,b)
 \a,\b,b
-(\a,\b,b) ((\a,a a) (\a,a a)) (\a,a)
+(\a,\b,b) ((\a,a) (\a,a)) (\a,a)
 \a,a
 (\a,a) (\a,a)
 \a,a
