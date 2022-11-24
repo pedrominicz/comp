@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Eval.CEK (eval) where
 
 import Eval.Common
@@ -24,6 +26,7 @@ step (v@(Closure e env), s) =
         -- Final state.
         Halt -> Nothing
     App f a -> Just (Closure f env, PendingArg a env s)
+    Let e1 e2 -> Just (Closure e1 env, PendingFun e2 env s)
 
 eval :: Expr -> Expr
 eval e = reify . fst $ farthest step (Closure e [], Halt)

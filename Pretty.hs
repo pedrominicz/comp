@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Pretty (pretty) where
 
 import Expr
@@ -7,6 +9,8 @@ pretty = expr 0
   where
   expr :: Int -> Expr -> String
   expr k (Lam b) = "λ " ++ vars !! k ++ ", " ++ expr (k + 1) b
+  expr k (Let e1 e2) =
+    "let " ++ vars !! k ++ " = " ++ expr k e1 ++ " in " ++ expr (k + 1) e2
   expr k e = application k e
 
   application :: Int -> Expr -> String

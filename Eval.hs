@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 module Eval (eval) where
@@ -5,12 +7,14 @@ module Eval (eval) where
 import Eval.Common (farthest)
 import Expr
 
+import Unsafe.Coerce
+
 type Level = Int
 
 data Closure
-  = Closure Expr Env
+  = Closure (ExprF 'False) Env
   | Level {-# UNPACK #-} !Level
-  | Expr Expr {-# UNPACK #-} !Level
+  | Expr (ExprF 'True) {-# UNPACK #-} !Level
   deriving Show
 
 pattern Lambda :: Closure
@@ -39,6 +43,7 @@ step (Closure e env, s, l) = Just $
         c@(Closure _ _) : s -> (Closure b (c : env), s, l)
         _ -> (Closure b (Level (l + 1) : env), Lambda : s, l + 1)
     App f a -> (Closure f env, Closure a env : s, l)
+    Let e1 e2 -> (Closure e2 (Closure e1 env : env), s, l)
 step (Level l', s, l) = Just (Expr (Var (l - l')) l, s, l)
 step (Expr e l', c : s, l) = Just $
   case c of
@@ -51,5 +56,5 @@ step (Expr _ _, [], _) = Nothing
 eval :: Expr -> Expr
 eval e =
   case farthest step (Closure e [], [], 0) of
-    (Expr e _, _, _) -> e
+    (Expr e _, _, _) -> unsafeCoerce e
     _ -> error "unreachable"

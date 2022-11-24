@@ -14,11 +14,14 @@ $digit = [0-9]
 
 tokens :-
   $white+       ;
-  @var          { Var }
-  "\" | "λ"     { const Lam }
+  "="           { const Equal }
   ","           { const Comma }
   "("           { const LParen }
   ")"           { const RParen }
+  "\" | "λ"     { const Lam }
+  "let"         { const Let }
+  "in"          { const In }
+  @var          { Var }
   "--" [^\n\r]* ;
 
 {
@@ -31,10 +34,13 @@ alexGetByte = B.uncons
 
 data Token
   = Var {-# UNPACK #-} !ByteString
-  | Lam
+  | Equal
   | Comma
   | LParen
   | RParen
+  | Lam
+  | Let
+  | In
 
 lexer :: ByteString -> Maybe [Token]
 lexer input =

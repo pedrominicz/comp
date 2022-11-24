@@ -5,7 +5,7 @@ set -e
 trap clean 0 1 2 3 6
 
 clean() {
-  rm -f Lex.hs Parse.hs a.out {,Eval/}*.{hi,o}
+  rm -f {Lex,Parse}.hs a.out {,Eval/}*.{hi,o}
 }
 
 #time swipl -c generate_test.pl --stand_alone=true --goal=main -o a.out
@@ -17,8 +17,7 @@ alias ghc='ghc -Wall -Wno-name-shadowing -O2 -rtsopts -with-rtsopts=-M4g -o a.ou
 alex Lex.x
 happy -acg Parse.y
 
-#ghc -c Expr.hs
-#ghc -ddump-to-file -ddump-simpl -dsuppress-all -dno-suppress-type-signatures -fforce-recomp -c Eval.hs
+#ghc -fno-code -ddump-to-file -ddump-simpl -dsuppress-all -dno-suppress-type-signatures -fforce-recomp Eval.hs
 #exit
 
 #ghc -prof -fprof-auto -rtsopts -with-rtsopts=-p Main.hs

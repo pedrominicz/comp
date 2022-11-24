@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Eval.Common where
@@ -31,3 +32,4 @@ reify (Closure e env) = go 0 (map reify env) e
       else env !! (x - k)
   go k env (Lam b) = Lam (go (k + 1) env b)
   go k env (App f a) = App (go k env f) (go k env a)
+  go k env (Let e1 e2) = Let (go k env e1) (go (k + 1) env e2)

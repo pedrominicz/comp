@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Eval.Strict (eval) where
 
 import Eval.Common
@@ -26,6 +28,9 @@ step (v@(Closure e env), s) =
         -- Final state.
         Halt -> Nothing
     App f a -> Just (Closure a env, Pending f env s)
+    -- This way of dealing with let expressions is very ad hoc and differs from
+    -- how the ZINC abstract machine does it.
+    Let e1 e2 -> Just (Closure e1 env, Pending (Lam e2) env s)
 
 eval :: Expr -> Expr
 eval e = reify . fst $ farthest step (Closure e [], Halt)
