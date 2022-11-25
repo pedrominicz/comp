@@ -1,60 +1,40 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Eval (eval) where
 
-import Eval.Common (farthest)
-import Expr
+import Compile
 
-import Unsafe.Coerce
-
-type Level = Int
-
-data Closure
-  = Closure (ExprF 'False) Env
-  | Level {-# UNPACK #-} !Level
-  | Expr (ExprF 'True) {-# UNPACK #-} !Level
+data Value
+  = Closure Expr Env
   deriving Show
 
-pattern Lambda :: Closure
-pattern Lambda <- Level _
+type Env = [Value]
+
+data Stack
+  = Continue Expr Env Stack
+  | Halt
+  deriving Show
+
+type State = (Expr, Env, Stack)
+
+continue :: Value -> Stack -> Either State Value
+continue v (Continue e env s) = Left (e, v : env, s)
+continue v Halt = Right v
+
+apply :: Value -> Value -> Stack -> Either State Value
+apply (Closure b env) v s = Left (b, v : env, s)
+
+step :: State -> Either State Value
+step (Var x, env, s) = continue (env !! x) s
+step (Lam b, env, s) = continue (Closure b env) s
+step (App f a, env, s) = apply (env !! f) (env !! a) s
+step (Let e1 e2, env, s) = Left (e1, env, Continue e2 env s)
+
+loop :: forall a b. (a -> Either a b) -> a -> b
+loop f = go
   where
-  Lambda = Level 0
+  go :: a -> b
+  go x = either go id (f x)
 
-{-# COMPLETE Closure, Lambda, Expr #-}
-
-type Env = [Closure]
-
-type Stack = [Closure]
-
-type State = (Closure, Stack, Level)
-
--- Crégut's strongly reducing Krivine abstract machine as described in Deriving
--- the Full-Reducing Krivine Machine from the Small-Step Operational Semantics
--- of Normal Order.
-step :: State -> Maybe State
-step (Closure e env, s, l) = Just $
-  case e of
-    -- Unbound variables throw exceptions.
-    Var x -> (env !! x, s, l)
-    Lam b ->
-      case s of
-        c@(Closure _ _) : s -> (Closure b (c : env), s, l)
-        _ -> (Closure b (Level (l + 1) : env), Lambda : s, l + 1)
-    App f a -> (Closure f env, Closure a env : s, l)
-    Let e1 e2 -> (Closure e2 (Closure e1 env : env), s, l)
-step (Level l', s, l) = Just (Expr (Var (l - l')) l, s, l)
-step (Expr e l', c : s, l) = Just $
-  case c of
-    Closure _ _ -> (c, Expr e l' : s, l')
-    Lambda -> (Expr (Lam e) l', s, l)
-    Expr e' l' -> (Expr (App e' e) l', s, l)
--- Final state.
-step (Expr _ _, [], _) = Nothing
-
-eval :: Expr -> Expr
-eval e =
-  case farthest step (Closure e [], [], 0) of
-    (Expr e _, _, _) -> unsafeCoerce e
-    _ -> error "unreachable"
+eval :: Expr -> Value
+eval e = loop step (e, [], Halt)

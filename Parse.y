@@ -1,11 +1,10 @@
 {
 module Parse (parse) where
 
-import qualified Expr as E
+import Syntax
 import qualified Lex as L
 
 import Data.ByteString (ByteString)
-import Data.List
 }
 
 %expect 0
@@ -48,21 +47,6 @@ arguments :: { [ByteString] }
   | var arguments                 { $1 : $2 }
 
 {
-data Expr
-  = Var {-# UNPACK #-} !ByteString
-  | Lam {-# UNPACK #-} !ByteString Expr
-  | App Expr Expr
-  | Let {-# UNPACK #-} !ByteString Expr Expr
-
-nameless :: Expr -> Maybe E.Expr
-nameless = go []
-  where
-  go :: [ByteString] -> Expr -> Maybe E.Expr
-  go ctx (Var x) = E.Var <$> elemIndex x ctx
-  go ctx (Lam x b) = E.Lam <$> go (x : ctx) b
-  go ctx (App f a) = E.App <$> go ctx f <*> go ctx a
-  go ctx (Let x e1 e2) = E.Let <$> go ctx e1 <*> go (x : ctx) e2
-
-parse :: ByteString -> Maybe E.Expr
-parse str = L.lexer str >>= expr >>= nameless
+parse :: ByteString -> Maybe Expr
+parse str = L.lexer str >>= expr
 }

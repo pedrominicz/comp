@@ -12,17 +12,18 @@ clean() {
 #time ./a.out >test.txt
 #exit
 
-alias ghc='ghc -Wall -Wno-name-shadowing -O2 -rtsopts -with-rtsopts=-M4g -o a.out'
+alias ghc='ghc -Wall -Werror -Wno-name-shadowing -O2 -rtsopts -with-rtsopts=-M4g -o a.out'
 
 alex Lex.x
 happy -acg Parse.y
 
-#ghc -fno-code -ddump-to-file -ddump-simpl -dsuppress-all -dno-suppress-type-signatures -fforce-recomp Eval.hs
+#ghc -c {Syntax,Lex,Parse,Normalize,Nameless,Compile}.hs
+#ghc -ddump-to-file -ddump-simpl -dsuppress-all -dno-suppress-type-signatures -fforce-recomp -c Eval.hs
 #exit
 
 #ghc -prof -fprof-auto -rtsopts -with-rtsopts=-p Main.hs
 #ghc Main.hs
-#./a.out <./test/check.txt
+#./a.out <test.txt |wc -l test.txt -
 #profiteur a.out.prof
 #exit
 
