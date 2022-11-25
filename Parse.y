@@ -31,7 +31,7 @@ import Data.ByteString (ByteString)
 
 expr :: { Expr }
   : 'λ' arguments ',' expr        { foldr Lam $4 $2 }
-  | 'let' var '=' expr 'in' expr  { Let $2 $4 $6 }
+  | 'let' var '=' expr 'in' expr  { Let ($2, 0) $4 $6 }
   | application                   { $1 }
 
 application :: { Expr }
@@ -39,12 +39,12 @@ application :: { Expr }
   | simple                        { $1 }
 
 simple :: { Expr }
-  : var                           { Var $1 }
+  : var                           { Var ($1, 0) }
   | '(' expr ')'                  { $2 }
 
-arguments :: { [ByteString] }
-  : var                           { [$1] }
-  | var arguments                 { $1 : $2 }
+arguments :: { [Name] }
+  : var                           { [($1, 0)] }
+  | var arguments                 { ($1, 0) : $2 }
 
 {
 parse :: ByteString -> Maybe Expr

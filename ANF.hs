@@ -1,9 +1,11 @@
-module ANF (AExpr(..), CExpr(..), Expr(..), Name, normalize) where
+module ANF (normalize, normalize') where
 
+import Expr
 import qualified Syntax as S
 
 import Control.Monad.State
-import Data.ByteString (ByteString, empty)
+import Data.List
+import qualified Data.ByteString as B
 
 -- Administrative normal form (ANF) expressions have to satisfy the constraints
 -- imposed by the two grammars below. Each grammar reveals some structure not
@@ -53,36 +55,30 @@ import Data.ByteString (ByteString, empty)
 -- continuation passing style (CPS) grammars in Compiling with Continuations,
 -- Continued.
 
-type Name = (ByteString, Int)
+fresh :: Monad m => StateT Int m S.Name
+fresh = state $ \x -> ((B.empty, x), x + 1)
 
-data AExpr
-  = Var {-# UNPACK #-} !Name
-  | Lam {-# UNPACK #-} !Name Expr
-  deriving (Eq, Show)
-
-data CExpr
-  = App {-# UNPACK #-} !Name {-# UNPACK #-} !Name
-  deriving (Eq, Show)
-
-data Expr
-  = AExpr AExpr
-  | CExpr CExpr
-  | Let {-# UNPACK #-} !Name Expr Expr
-  deriving (Eq, Show)
-
-fresh :: State Int Name
-fresh = state $ \x -> ((empty, x), x + 1)
-
-normalize :: S.Expr -> Expr
-normalize e = evalState (expr e) 0
+nameless :: S.Expr -> Maybe Expr
+nameless = go []
   where
-  expr :: S.Expr -> State Int Expr
-  expr (S.Var x) = return $ AExpr (Var (x, 0))
-  expr (S.Lam x b) = AExpr . Lam (x, 0) <$> expr b
+  go :: [S.Name] -> S.Expr -> Maybe Expr
+  go ctx (S.Var x) = Var <$> elemIndex x ctx
+  go ctx (S.Lam x b) = Lam <$> go (x : ctx) b
+  go ctx (S.App (S.Var f) (S.Var a)) =
+    App <$> elemIndex f ctx <*> elemIndex a ctx
+  go _ (S.App _ _) = error "unreachable"
+  go ctx (S.Let x e1 e2) = Let <$> go ctx e1 <*> go (x : ctx) e2
+
+normalize :: S.Expr -> Maybe Expr
+normalize e = nameless $ evalState (expr e) 0
+  where
+  expr :: S.Expr -> State Int S.Expr
+  expr (S.Var x) = return $ S.Var x
+  expr (S.Lam x b) = S.Lam x <$> expr b
   expr (S.App f a) =
     name f $ \f ->
       name a $ \a ->
-        return $ CExpr (App f a) 
+        return $ S.App (S.Var f) (S.Var a) 
   expr (S.Let x e1 e2) = do
     e1 <- expr e1
     e2 <- expr e2
@@ -91,14 +87,44 @@ normalize e = evalState (expr e) 0
     -- doesn't actually normalizes terms, as it doesn't deal with the let
     -- expression invariant.
     case e1 of
-      Let x' e1' e2' -> return $ Let x' e1' (Let (x, 0) e2' e2)
-      _ -> return $ Let (x, 0) e1 e2
+      S.Let x' e1' e2' -> return $ S.Let x' e1' (S.Let x e2' e2)
+      _ -> return $ S.Let x e1 e2
 
-  name :: S.Expr -> (Name -> State Int Expr) -> State Int Expr
+  name :: S.Expr -> (S.Name -> State Int S.Expr) -> State Int S.Expr
   name e k = do
     e <- expr e
     case e of
-      AExpr (Var x) -> k x
+      S.Var x -> k x
       _ -> do
         x <- fresh
-        Let x e <$> k x
+        S.Let x e <$> k x
+
+type M a = StateT Int Maybe Expr
+
+normalize' :: S.Expr -> Maybe Expr
+normalize' e = evalStateT (expr [] e) 0
+  where
+  expr :: [S.Name] -> S.Expr -> M Expr
+  expr ctx (S.Var x) = lift $ Var <$> elemIndex x ctx
+  expr ctx (S.Lam x b) = Lam <$> expr (x : ctx) b
+  expr ctx (S.App f a) =
+    name ctx f $ \ctx f ->
+      name ctx a $ \ctx a ->
+        lift $ App <$> elemIndex f ctx <*> elemIndex a ctx
+  expr ctx (S.Let x e1 e2) = do
+    e1 <- expr ctx e1
+    case e1 of
+      Let e1' e2' -> Let e1' . Let e2' <$> expr (x : dummy : ctx) e2
+      _ -> Let e1 <$> expr (x : ctx) e2
+
+  name :: [S.Name] -> S.Expr -> ([S.Name] -> S.Name -> M Expr) -> M Expr
+  name ctx e k = do
+    e <- expr ctx e
+    case e of
+      Var x -> k ctx (ctx !! x)
+      _ -> do
+        x <- fresh
+        Let e <$> k (x : ctx) x
+
+  dummy :: S.Name
+  dummy = (B.empty, 0)

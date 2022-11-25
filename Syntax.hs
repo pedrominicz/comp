@@ -1,10 +1,12 @@
-module Syntax (Expr(..)) where
+module Syntax (Expr(..), Name) where
 
 import Data.ByteString (ByteString)
 
+type Name = (ByteString, Int)
+
 data Expr
-  = Var {-# UNPACK #-} !ByteString
-  | Lam {-# UNPACK #-} !ByteString Expr
+  = Var {-# UNPACK #-} !Name
+  | Lam {-# UNPACK #-} !Name Expr
   | App Expr Expr
-  | Let {-# UNPACK #-} !ByteString Expr Expr
+  | Let {-# UNPACK #-} !Name Expr Expr
   deriving (Eq, Show)

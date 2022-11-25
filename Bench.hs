@@ -2,9 +2,9 @@
 
 module Bench (main) where
 
-import Eval
-import Expr
+import ANF
 import Parse
+import Syntax
 
 import Criterion.Main
 import Data.ByteString (ByteString)
@@ -24,16 +24,16 @@ e4 = fromJust (parse str4)
 
 main :: IO ()
 main = defaultMain
-  [ bgroup "parse"
-    [ bench "1" $ nf parse str1
-    , bench "2" $ nf parse str2
-    , bench "3" $ nf parse str3
-    , bench "4" $ nf parse str4
+  [ bgroup "normalize"
+    [ bench "1" $ nf normalize e1   -- 53.5 μs
+    , bench "2" $ nf normalize e2   -- 330 μs
+    , bench "3" $ nf normalize e3   -- 2.90 ms
+    , bench "4" $ nf normalize e4   -- 26.4 ms
     ]
-  , bgroup "eval"
-    [ bench "1" $ nf eval e1
-    , bench "2" $ nf eval e2
-    , bench "3" $ nf eval e3
-    , bench "4" $ nf eval e4
+  , bgroup "normalize'"
+    [ bench "1" $ nf normalize' e1  -- 64.8 μs
+    , bench "2" $ nf normalize' e2  -- 419 μs
+    , bench "3" $ nf normalize' e3  -- 3.10 ms
+    , bench "4" $ nf normalize' e4  -- 22.2 ms
     ]
   ]

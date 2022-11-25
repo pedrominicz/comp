@@ -23,7 +23,7 @@ happy -acg Parse.y
 
 #ghc -prof -fprof-auto -rtsopts -with-rtsopts=-p Main.hs
 #ghc Main.hs
-#./a.out <test.txt |wc -l test.txt -
+#./a.out <test.txt
 #profiteur a.out.prof
 #exit
 
