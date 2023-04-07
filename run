@@ -1,41 +1,40 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 set -e
 
-trap clean 0 1 2 3 6
+CABAL="$(which cabal)"
 
-clean() {
-  rm -f {Lex,Parse}.hs a.out {,Eval/}*.{hi,o}
+cabal() {
+  echo cabal "$@" >&2
+  $CABAL -v0 --builddir=.dist "$@"
 }
 
-#time swipl -c generate_test.pl --stand_alone=true --goal=main -o a.out
-#time ./a.out >test.txt
-#exit
+mkdir -p test
 
-alias ghc='ghc -Wall -Werror -Wno-name-shadowing -O2 -rtsopts -with-rtsopts=-M4g -o a.out'
+if [ ! -f 'test/input.txt' ] || [ ! -f 'test/output.txt' ]; then
+  swipl -c generate_test.pl --stand_alone=true --goal=main -o a.out
 
-alex Lex.x
-happy -acg Parse.y
+  echo 'generating tests...'
 
-#ghc -c {Syntax,Lex,Parse,Normalize,Nameless,Compile}.hs
-#ghc -ddump-to-file -ddump-simpl -dsuppress-all -dno-suppress-type-signatures -fforce-recomp -c Eval.hs
-#exit
+  TMP="$(mktemp)"
 
-#ghc -prof -fprof-auto -rtsopts -with-rtsopts=-p Main.hs
-#ghc Main.hs
-#./a.out <test.txt
-#profiteur a.out.prof
-#exit
+  time ./a.out >"$TMP"
 
-#ghc -dynamic -main-is Bench.main Bench.hs
-#./a.out --csv bench.csv --output bench.html
-#exit
+  awk 'NR % 2 == 0' <"$TMP" >test/output.txt
+  awk 'NR % 2 == 1' <"$TMP" >test/input.txt
 
-case "$1" in
-  Main.hs)  runhaskell Main.hs;;
-  *.hs)     ghci "$1";;
-  *.pl)     swipl "$1";;
-  *.x)      ghci Lex.hs;;
-  *.y)      ghci Parse.hs;;
-  *)        echo "cannot run '$1'";;
-esac
+  rm a.out "$TMP"
+
+  unset TMP
+fi
+
+time cabal build
+
+#time cabal run stlc <test/input.txt >/dev/null
+time cmp <(cabal run stlc <test/input.txt) test/output.txt
+
+#time (
+#  for i in {1..100}; do
+#    cabal run stlc <test/input.txt >/dev/null
+#  done
+#)

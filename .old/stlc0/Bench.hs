@@ -24,16 +24,8 @@ e4 = fromJust (parse str4)
 
 main :: IO ()
 main = defaultMain
-  [ bgroup "normalize"
-    [ bench "1" $ nf normalize e1   -- 53.5 μs
-    , bench "2" $ nf normalize e2   -- 330 μs
-    , bench "3" $ nf normalize e3   -- 2.90 ms
-    , bench "4" $ nf normalize e4   -- 26.4 ms
-    ]
-  , bgroup "normalize'"
-    [ bench "1" $ nf normalize' e1  -- 64.8 μs
-    , bench "2" $ nf normalize' e2  -- 419 μs
-    , bench "3" $ nf normalize' e3  -- 3.10 ms
-    , bench "4" $ nf normalize' e4  -- 22.2 ms
-    ]
+  [ bench "1" $ nf normalize e1
+  , bench "2" $ nf normalize e2
+  , bench "3" $ nf normalize e3
+  , bench "4" $ nf normalize e4
   ]

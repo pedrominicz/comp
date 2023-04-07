@@ -17,6 +17,7 @@ import Data.ByteString (ByteString)
 %name expr expr
 
 %token
+  num           { L.Num $$ }
   var           { L.Var $$ }
   '='           { L.Equal }
   ','           { L.Comma }
@@ -25,13 +26,18 @@ import Data.ByteString (ByteString)
   'λ'           { L.Lam }
   'let'         { L.Let }
   'in'          { L.In }
+  '+'           { L.Plus }
 %%
 
 -- Expressions
 
 expr :: { Expr }
-  : 'λ' arguments ',' expr        { foldr Lam $4 $2 }
+  : 'λ' args1 ',' expr            { foldr Lam $4 $2 }
   | 'let' var '=' expr 'in' expr  { Let ($2, 0) $4 $6 }
+  | addition                      { $1 }
+
+addition :: { Expr }
+  : addition '+' application      { Add $1 $3 }
   | application                   { $1 }
 
 application :: { Expr }
@@ -39,12 +45,13 @@ application :: { Expr }
   | simple                        { $1 }
 
 simple :: { Expr }
-  : var                           { Var ($1, 0) }
+  : num                           { Num $1 }
+  | var                           { Var ($1, 0) }
   | '(' expr ')'                  { $2 }
 
-arguments :: { [Name] }
+args1 :: { [Name] }
   : var                           { [($1, 0)] }
-  | var arguments                 { ($1, 0) : $2 }
+  | var args1                     { ($1, 0) : $2 }
 
 {
 parse :: ByteString -> Maybe Expr

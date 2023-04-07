@@ -1,10 +1,11 @@
-module ANF (normalize, normalize') where
+module ANF (normalize) where
 
-import Expr
-import qualified Syntax as S
+import Syntax
+import qualified Expr as E
 
+-- XXX BENCHMARK STRICT STATE
 import Control.Monad.State
-import Data.List
+import Data.List (elemIndex)
 import qualified Data.ByteString as B
 
 -- Administrative normal form (ANF) expressions have to satisfy the constraints
@@ -55,76 +56,51 @@ import qualified Data.ByteString as B
 -- continuation passing style (CPS) grammars in Compiling with Continuations,
 -- Continued.
 
-fresh :: Monad m => StateT Int m S.Name
+fresh :: State Int Name
 fresh = state $ \x -> ((B.empty, x), x + 1)
 
-nameless :: S.Expr -> Maybe Expr
+nameless :: Expr -> Maybe E.Expr
 nameless = go []
   where
-  go :: [S.Name] -> S.Expr -> Maybe Expr
-  go ctx (S.Var x) = Var <$> elemIndex x ctx
-  go ctx (S.Lam x b) = Lam <$> go (x : ctx) b
-  go ctx (S.App (S.Var f) (S.Var a)) =
-    App <$> elemIndex f ctx <*> elemIndex a ctx
-  go _ (S.App _ _) = error "unreachable"
-  go ctx (S.Let x e1 e2) = Let <$> go ctx e1 <*> go (x : ctx) e2
+  go :: [Name] -> Expr -> Maybe E.Expr
+  go ctx (Var x) = E.Var <$> elemIndex x ctx
+  go ctx (Lam x b) = E.Lam <$> go (x : ctx) b
+  go ctx (App (Var f) (Var a)) =
+    E.App <$> elemIndex f ctx <*> elemIndex a ctx
+  go ctx (Let x e1 e2) = E.Let <$> go ctx e1 <*> go (x : ctx) e2
+  go _ (Num n) = Just (E.Num n)
+  go ctx (Add (Var x1) (Var x2)) =
+    E.Add <$> elemIndex x1 ctx <*> elemIndex x2 ctx
+  go _ _ = error "unreachable"
 
-normalize :: S.Expr -> Maybe Expr
-normalize e = nameless $ evalState (expr e) 0
+normalize :: Expr -> Maybe E.Expr
+normalize e = nameless $ evalState (go e) 0
   where
-  expr :: S.Expr -> State Int S.Expr
-  expr (S.Var x) = return $ S.Var x
-  expr (S.Lam x b) = S.Lam x <$> expr b
-  expr (S.App f a) =
-    name f $ \f ->
-      name a $ \a ->
-        return $ S.App (S.Var f) (S.Var a) 
-  expr (S.Let x e1 e2) = do
-    e1 <- expr e1
-    e2 <- expr e2
+  go :: Expr -> State Int Expr
+  go (Var x) = return $ Var x
+  go (Lam x b) = Lam x <$> go b
+  go (App f a) = do
+    f <- go f
+    a <- go a
+    name f $ \f -> name a $ \a -> return $ App (Var f) (Var a)
+  go (Let x e1 e2) = do
+    e1 <- go e1
+    e2 <- go e2
     -- As pointed out in Compiling with Continuations, Continued, the
     -- A-normalization algorithm in The Essence of Compiling with Continuations
     -- doesn't actually normalizes terms, as it doesn't deal with the let
     -- expression invariant.
     case e1 of
-      S.Let x' e1' e2' -> return $ S.Let x' e1' (S.Let x e2' e2)
-      _ -> return $ S.Let x e1 e2
+      Let x' e1' e2' -> return $ Let x' e1' (Let x e2' e2)
+      _ -> return $ Let x e1 e2
+  go (Num n) = return $ Num n
+  go (Add e1 e2) = do
+    e1 <- go e1
+    e2 <- go e2
+    name e1 $ \x1 -> name e2 $ \x2 -> return $ Add (Var x1) (Var x2)
 
-  name :: S.Expr -> (S.Name -> State Int S.Expr) -> State Int S.Expr
+  name :: Expr -> (Name -> State Int Expr) -> State Int Expr
+  name (Var x) k = k x
   name e k = do
-    e <- expr e
-    case e of
-      S.Var x -> k x
-      _ -> do
-        x <- fresh
-        S.Let x e <$> k x
-
-type M a = StateT Int Maybe Expr
-
-normalize' :: S.Expr -> Maybe Expr
-normalize' e = evalStateT (expr [] e) 0
-  where
-  expr :: [S.Name] -> S.Expr -> M Expr
-  expr ctx (S.Var x) = lift $ Var <$> elemIndex x ctx
-  expr ctx (S.Lam x b) = Lam <$> expr (x : ctx) b
-  expr ctx (S.App f a) =
-    name ctx f $ \ctx f ->
-      name ctx a $ \ctx a ->
-        lift $ App <$> elemIndex f ctx <*> elemIndex a ctx
-  expr ctx (S.Let x e1 e2) = do
-    e1 <- expr ctx e1
-    case e1 of
-      Let e1' e2' -> Let e1' . Let e2' <$> expr (x : dummy : ctx) e2
-      _ -> Let e1 <$> expr (x : ctx) e2
-
-  name :: [S.Name] -> S.Expr -> ([S.Name] -> S.Name -> M Expr) -> M Expr
-  name ctx e k = do
-    e <- expr ctx e
-    case e of
-      Var x -> k ctx (ctx !! x)
-      _ -> do
-        x <- fresh
-        Let e <$> k (x : ctx) x
-
-  dummy :: S.Name
-  dummy = (B.empty, 0)
+    x <- fresh
+    Let x e <$> k x

@@ -2,6 +2,9 @@
 *.cmo
 *.hi
 *.o
+.dist/
 a.out
+dist-newstyle/
 out
 out.S
+test/

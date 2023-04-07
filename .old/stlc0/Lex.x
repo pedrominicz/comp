@@ -10,7 +10,8 @@ import qualified Data.ByteString as B
 $alpha = [A-Za-z]
 $digit = [0-9]
 
-@var = [$alpha] [$alpha $digit _]*
+@num = $digit+
+@var = $alpha [$alpha $digit _]*
 
 tokens :-
   $white+       ;
@@ -21,6 +22,8 @@ tokens :-
   "\" | "λ"     { const Lam }
   "let"         { const Let }
   "in"          { const In }
+  "+"           { const Plus }
+  @num          { number }
   @var          { Var }
   "--" [^\n\r]* ;
 
@@ -34,6 +37,7 @@ alexGetByte = B.uncons
 
 data Token
   = Var {-# UNPACK #-} !ByteString
+  | Num {-# UNPACK #-} !Int
   | Equal
   | Comma
   | LParen
@@ -41,6 +45,11 @@ data Token
   | Lam
   | Let
   | In
+  | Plus
+  deriving (Eq, Show)
+
+number :: AlexInput -> Token
+number = Num . B.foldl' (\x c -> x * 10 + fromEnum c - fromEnum '0') 0
 
 lexer :: ByteString -> Maybe [Token]
 lexer input =

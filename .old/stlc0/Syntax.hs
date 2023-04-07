@@ -5,8 +5,10 @@ import Data.ByteString (ByteString)
 type Name = (ByteString, Int)
 
 data Expr
-  = Var {-# UNPACK #-} !Name
-  | Lam {-# UNPACK #-} !Name Expr
+  = Var Name
+  | Lam Name Expr
   | App Expr Expr
-  | Let {-# UNPACK #-} !Name Expr Expr
+  | Let Name Expr Expr
+  | Num Int
+  | Add Expr Expr
   deriving (Eq, Show)
