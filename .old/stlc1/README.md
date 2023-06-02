@@ -2,7 +2,7 @@ Fast implementation of type inference for simply typed lambda calculus. A lot of
 
 Here are a few things I tested that were, surprisingly, slightly slower than using `Maybe` in `Infer`:
 - hopefully safe custom exceptions like smalltt
-- completely unsafe custom exceptions (`raiseIO# () s`)
+- completely unsafe exceptions (`raiseIO# () s`)
 - continuation-passing style (`(a -> IO Type) -> IO Type`)
 
 [0]: https://github.com/AndrasKovacs/smalltt

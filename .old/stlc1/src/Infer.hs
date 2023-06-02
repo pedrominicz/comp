@@ -59,14 +59,14 @@ runInfer :: Infer a -> IO (Maybe a)
 runInfer x = new >>= runMaybeT . runReaderT x
 
 data Ctx
-  = Bind {-# UNPACK #-} !ByteString Type Ctx
+  = Bind Ctx {-# UNPACK #-} !ByteString Type
   | Empty
 
 typeOf' :: Ctx -> ByteString -> Maybe Type
 typeOf' ctx x = go ctx
   where
   go :: Ctx -> Maybe Type
-  go (Bind x' t ctx) =
+  go (Bind ctx x' t) =
     if x == x'
       then Just t
       else go ctx
@@ -79,7 +79,7 @@ infer str e = runInfer $ go Empty e >>= deref
   go ctx (Var x) = lift . hoistMaybe $ typeOf' ctx (F.unsafeSlice str x)
   go ctx (Lam x b) = do
     ta <- fresh
-    tb <- go (Bind (F.unsafeSlice str x) ta ctx) b
+    tb <- go (Bind ctx (F.unsafeSlice str x) ta) b
     return (Fun ta tb)
   go ctx (App f a) = do
     tf <- go ctx f

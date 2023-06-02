@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+set -e
+
+CABAL="$(which cabal)"
+
+cabal() {
+  echo cabal "$@" >&2
+  $CABAL -v0 --builddir=.dist "$@"
+}
+
+mkdir -p test
+
+if [ ! -f 'test/input.txt' ] || [ ! -f 'test/output.txt' ]; then
+  swipl -c generate_test.pl --stand_alone=true --goal=main -o a.out
+
+  echo 'generating tests...'
+
+  TMP="$(mktemp)"
+
+  time ./a.out >"$TMP"
+
+  awk 'NR % 2 == 0' <"$TMP" >test/output.txt
+  awk 'NR % 2 == 1' <"$TMP" >test/input.txt
+
+  rm a.out "$TMP"
+
+  unset TMP
+fi
+
+time cabal build
+
+cmp <(cabal run stlc <test/input.txt) test/output.txt
+
+time (
+  for i in {1..10}; do
+    cabal run stlc <test/input.txt >/dev/null
+  done
+)
