@@ -1,14 +1,31 @@
 #!/usr/bin/env bash
 
-set -e
+make || exit 1
 
-CABAL="$(which cabal)"
+assert() {
+  expected="$1"
+  input="$2"
 
-cabal() {
-  echo cabal "$@" >&2
-  $CABAL -v0 --builddir=.dist "$@"
+  ./m "$input" >tmp.s || exit 1
+  gcc -static -o tmp tmp.s || exit 1
+  ./tmp
+  actual="$?"
+
+  if [ "$actual" -ne "$expected" ]; then
+    echo "expected $expected, but got $actual" >&2
+    exit 1
+  fi
 }
 
-time cabal build
+assert 0 0
+assert 40 40
+assert 20 '5+19-4'
+assert 40 ' 12 + 33 - 5 '
+assert 46 '4 + 6 * 7'
+assert 15 '5 * (9 - 6)'
+assert 4 '(3 + 5) / 2'
+assert 10 '-10 + 20'
+assert 10 '--10'
+assert 10 '--+10'
 
-time cabal run ml
+echo 'OK'
