@@ -3,12 +3,10 @@ CFLAGS = -std=c99 -pedantic -Wall -Wextra -Werror -Wfatal-errors -O2
 SRC := $(wildcard *.c)
 OBJ := $(SRC:%.c=.build/%.o)
 
-all: setup m
+all: m
 
-setup:
-	mkdir -p .build
-
-.build/%.o: %.c
+.build/%.o: %.c prelude.h
+	@mkdir -p $(@D)
 	$(CC) -o $@ -c $(CFLAGS) $<
 
 m: $(OBJ)

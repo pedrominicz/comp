@@ -17,6 +17,15 @@ enum {
   TK_SUB,
   TK_MUL,
   TK_DIV,
+  TK_EQ,
+  TK_NE,
+  TK_LT,
+  TK_LE,
+  TK_GT,
+  TK_GE,
+  TK_NOT,
+  TK_ASSIGN,
+  TK_SEMICOLON,
 };
 
 struct token {
@@ -26,8 +35,9 @@ struct token {
   int line;
 };
 
+void print_token(struct token tk);
 void lex_init(char* source);
-struct token lex_next_token(void);
+struct token lex(void);
 
 // parse
 
@@ -38,18 +48,23 @@ enum {
   ND_MUL,
   ND_DIV,
   ND_NEG,
+  ND_EQ,
+  ND_LE,
+  ND_NOT,
+  ND_EXPR_STMT,
 };
 
 struct node {
   int kind;
+  struct node* next;
   struct node* lhs;
   struct node* rhs;
   int value;
 };
 
-void print_node(struct node* node, int indent);
+void print_expr(struct node* node, int indent);
 void parse_init(char* source);
-struct node* parse_expr(void);
+struct node* parse(void);
 
 // gen
 

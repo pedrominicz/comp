@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
   if (argc != 2) die(0, "invalid number of arguments");
 
   parse_init(argv[1]);
-  gen(parse_expr());
+  gen(parse());
 
   return 0;
 }
