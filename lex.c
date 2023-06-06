@@ -1,4 +1,4 @@
-#include "prelude.h"
+#include "all.h"
 
 static char* current;
 static char* start;
@@ -36,6 +36,15 @@ struct token lex(void) {
     return new_token(TK_NUM);
   }
 
+  if (isalpha(*current)) {
+    while (isalpha(*current) || isdigit(*current)) ++current;
+    struct token tk = new_token(TK_IDENT);
+
+    if (!strncmp("return", tk.text, tk.length)) tk.kind = TK_RETURN;
+
+    return tk;
+  }
+
   switch (*current++) {
     case '(': return new_token(TK_LPAREN);
     case ')': return new_token(TK_RPAREN);
@@ -48,6 +57,8 @@ struct token lex(void) {
     case '<': return new_token(*current == '=' ? ++current, TK_LE : TK_LT);
     case '>': return new_token(*current == '=' ? ++current, TK_GE : TK_GT);
     case ';': return new_token(TK_SEMICOLON);
+    case '{': return new_token(TK_LBRACE);
+    case '}': return new_token(TK_RBRACE);
   }
 
   die(line, "unexpected character: '%c'", *--current);
@@ -57,6 +68,7 @@ struct token lex(void) {
 void print_token(struct token tk) {
   static char* name[] = {
     [TK_EOF]        = "EOF",
+    [TK_IDENT]      = "IDENT",
     [TK_NUM]        = "NUM",
     [TK_LPAREN]     = "LPAREN",
     [TK_RPAREN]     = "RPAREN",
@@ -73,7 +85,10 @@ void print_token(struct token tk) {
     [TK_NOT]        = "NOT",
     [TK_ASSIGN]     = "ASSIGN",
     [TK_SEMICOLON]  = "SEMICOLON",
+    [TK_RETURN]     = "RETURN",
+    [TK_LBRACE]     = "LBRACE",
+    [TK_RBRACE]     = "RBRACE",
   };
 
-  printf("%.*s\t%s\n", tk.length, tk.text, name[tk.kind]);
+  fprintf(stderr, "%.*s\t%s\n", tk.length, tk.text, name[tk.kind]);
 }

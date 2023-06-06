@@ -1,11 +1,11 @@
-CFLAGS = -std=c99 -pedantic -Wall -Wextra -Werror -Wfatal-errors -O2
+CFLAGS = -pedantic -Wall -Werror -Wfatal-errors -O2
 
 SRC := $(wildcard *.c)
 OBJ := $(SRC:%.c=.build/%.o)
 
 all: m
 
-.build/%.o: %.c prelude.h
+.build/%.o: %.c all.h
 	@mkdir -p $(@D)
 	$(CC) -o $@ -c $(CFLAGS) $<
 

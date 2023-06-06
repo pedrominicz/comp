@@ -1,6 +1,7 @@
-#include "prelude.h"
+#include "all.h"
 
 static struct token current;
+static struct var* locals; // variables created during parsing
 
 void parse_init(char* source) {
   lex_init(source);
@@ -50,13 +51,26 @@ static void consume(int kind, char* msg) {
 }
 
 static struct node* expr(void);
+static struct node* eq_expr(void);
 static struct node* add_expr(void);
 static struct node* mul_expr(void);
 static struct node* prefix_expr(void);
 static struct node* simple_expr(void);
 
-// comparison or equality (non-associative)
+// assignment (non-associative)
 static struct node* expr(void) {
+  struct node* node = eq_expr();
+
+  if (current.kind == TK_ASSIGN) {
+    current = lex();
+    return new_binary(ND_ASSIGN, node, eq_expr());
+  }
+
+  return node;
+}
+
+// comparison or equality (non-associative)
+static struct node* eq_expr(void) {
   struct node* node = add_expr();
 
   switch (current.kind) {
@@ -86,17 +100,16 @@ static struct node* add_expr(void) {
   struct node* node = mul_expr();
 
   for (;;) {
+    int kind;
+
     switch (current.kind) {
-      case TK_ADD:
-        current = lex();
-        node = new_binary(ND_ADD, node, mul_expr());
-        break;
-      case TK_SUB:
-        current = lex();
-        node = new_binary(ND_SUB, node, mul_expr());
-        break;
+      case TK_ADD: kind = ND_ADD; break;
+      case TK_SUB: kind = ND_SUB; break;
       default: return node;
     }
+
+    current = lex();
+    node = new_binary(kind, node, mul_expr());
   }
 }
 
@@ -104,17 +117,16 @@ static struct node* mul_expr(void) {
   struct node* node = prefix_expr();
 
   for (;;) {
+    int kind;
+
     switch (current.kind) {
-      case TK_MUL:
-        current = lex();
-        node = new_binary(ND_MUL, node, prefix_expr());
-        break;
-      case TK_DIV:
-        current = lex();
-        node = new_binary(ND_DIV, node, prefix_expr());
-        break;
+      case TK_MUL: kind = ND_MUL; break;
+      case TK_DIV: kind = ND_DIV; break;
       default: return node;
     }
+
+    current = lex();
+    node = new_binary(kind, node, prefix_expr());
   }
 }
 
@@ -127,6 +139,21 @@ static struct node* prefix_expr(void) {
   }
 }
 
+static struct var* new_var(void) {
+  for (struct var* var = locals; var; var = var->next) {
+    if (strlen(var->name) == current.length && !strncmp(var->name, current.text, current.length)) {
+      return var;
+    }
+  }
+
+  struct var* var = alloc(sizeof (struct var));
+  var->name = strndup(current.text, current.length);
+  var->next = locals;
+  locals = var;
+
+  return var;
+}
+
 static struct node* simple_expr(void) {
   struct node* node = NULL;
 
@@ -137,30 +164,79 @@ static struct node* simple_expr(void) {
       node->value = strtoul(current.text, NULL, 10);
       current = lex();
       break;
+    case TK_IDENT:
+      node = alloc(sizeof (struct node));
+      node->kind = ND_VAR;
+      node->var = new_var();
+      current = lex();
+      break;
     case TK_LPAREN:
       current = lex();
       node = expr();
       consume(TK_RPAREN, "expected ')'");
-      return node;
-    default: die(current.line, "expected a number or '('");
+      break;
+    default: die(current.line, "expected an expression");
   }
 
   return node;
 }
 
+static struct node* stmt(void);
+static struct node* block_stmt(void);
+
 static struct node* stmt(void) {
+  if (current.kind == TK_SEMICOLON) {
+    current = lex();
+
+    struct node* node = alloc(sizeof (struct node));
+    node->kind = ND_BLOCK;
+
+    return node;
+  }
+
+  if (current.kind == TK_RETURN) {
+    current = lex();
+
+    struct node* node = new_unary(ND_RETURN, expr());
+    consume(TK_SEMICOLON, "expected ';'");
+
+    return node;
+  }
+
+  if (current.kind == TK_LBRACE) {
+    current = lex();
+    return block_stmt();
+  }
+
   struct node* node = new_unary(ND_EXPR_STMT, expr());
   consume(TK_SEMICOLON, "expected ';'");
+
   return node;
 }
 
-struct node* parse(void) {
+static struct node* block_stmt(void) {
   struct node head = {0};
   struct node* node = &head;
 
-  while (current.kind != TK_EOF) {
+  while (current.kind != TK_RBRACE) {
     node = node->next = stmt();
   }
 
-  return head.next;
+  current = lex();
+
+  node = alloc(sizeof (struct node));
+  node->kind = ND_BLOCK;
+  node->body = head.next;
+
+  return node;
+}
+
+struct fn* parse(void) {
+  consume(TK_LBRACE, "expected '{'");
+
+  struct fn* fn = alloc(sizeof (struct fn));
+  fn->body = block_stmt();
+  fn->locals = locals;
+
+  return fn;
 }

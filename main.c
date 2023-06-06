@@ -1,7 +1,7 @@
-#include "prelude.h"
+#include "all.h"
 
 void die(int line, char* msg, ...) {
-  if (line) fprintf(stderr, "[line %d] ", line);
+  if (line) fprintf(stderr, "line %d: ", line);
 
   va_list ap;
 
@@ -15,7 +15,7 @@ void die(int line, char* msg, ...) {
 }
 
 void* alloc(int size) {
-  void* buffer = malloc(size);
+  void* buffer = calloc(1, size);
   if (!buffer) die(0, "failed to allocate memory");
   return buffer;
 }

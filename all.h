@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 void die(int line, char* fmt, ...);
 void* alloc(int size);
@@ -10,6 +11,7 @@ void* alloc(int size);
 
 enum {
   TK_EOF,
+  TK_IDENT,
   TK_NUM,
   TK_LPAREN,
   TK_RPAREN,
@@ -26,6 +28,9 @@ enum {
   TK_NOT,
   TK_ASSIGN,
   TK_SEMICOLON,
+  TK_RETURN,
+  TK_LBRACE,
+  TK_RBRACE,
 };
 
 struct token {
@@ -42,6 +47,7 @@ struct token lex(void);
 // parse
 
 enum {
+  ND_VAR,
   ND_NUM,
   ND_ADD,
   ND_SUB,
@@ -51,21 +57,38 @@ enum {
   ND_EQ,
   ND_LE,
   ND_NOT,
+  ND_ASSIGN,
   ND_EXPR_STMT,
+  ND_RETURN,
+  ND_BLOCK,
+};
+
+struct var {
+  struct var* next;
+  char* name;
+  int offset;
 };
 
 struct node {
   int kind;
-  struct node* next;
+  struct node* next; // statement after semicolon
   struct node* lhs;
   struct node* rhs;
+  struct node* body; // block statement
+  struct var* var;
   int value;
+};
+
+struct fn {
+  struct node* body;
+  struct var* locals;
+  int stack_size;
 };
 
 void print_expr(struct node* node, int indent);
 void parse_init(char* source);
-struct node* parse(void);
+struct fn* parse(void);
 
 // gen
 
-void gen(struct node* node);
+void gen(struct fn* fn);
