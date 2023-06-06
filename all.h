@@ -31,6 +31,10 @@ enum {
   TK_RETURN,
   TK_LBRACE,
   TK_RBRACE,
+  TK_IF,
+  TK_ELSE,
+  TK_FOR,
+  TK_WHILE,
 };
 
 struct token {
@@ -61,6 +65,8 @@ enum {
   ND_EXPR_STMT,
   ND_RETURN,
   ND_BLOCK,
+  ND_IF,
+  ND_FOR,
 };
 
 struct var {
@@ -71,10 +77,15 @@ struct var {
 
 struct node {
   int kind;
-  struct node* next; // statement after semicolon
+  struct node* next;  // statement after semicolon
   struct node* lhs;
   struct node* rhs;
-  struct node* body; // block statement
+  struct node* body;  // block statement
+  struct node* cond;
+  struct node* then;
+  struct node* else_;
+  struct node* init;  // for (init; cond; step) body
+  struct node* step;
   struct var* var;
   int value;
 };

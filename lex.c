@@ -40,7 +40,11 @@ struct token lex(void) {
     while (isalpha(*current) || isdigit(*current)) ++current;
     struct token tk = new_token(TK_IDENT);
 
-    if (!strncmp("return", tk.text, tk.length)) tk.kind = TK_RETURN;
+    if (tk.length == 6 && !strncmp("return", tk.text, tk.length)) tk.kind = TK_RETURN;
+    if (tk.length == 2 && !strncmp("if",     tk.text, tk.length)) tk.kind = TK_IF;
+    if (tk.length == 4 && !strncmp("else",   tk.text, tk.length)) tk.kind = TK_ELSE;
+    if (tk.length == 3 && !strncmp("for",    tk.text, tk.length)) tk.kind = TK_FOR;
+    if (tk.length == 5 && !strncmp("while",  tk.text, tk.length)) tk.kind = TK_WHILE;
 
     return tk;
   }
@@ -88,6 +92,10 @@ void print_token(struct token tk) {
     [TK_RETURN]     = "RETURN",
     [TK_LBRACE]     = "LBRACE",
     [TK_RBRACE]     = "RBRACE",
+    [TK_IF]         = "IF",
+    [TK_ELSE]       = "ELSE",
+    [TK_FOR]        = "FOR",
+    [TK_WHILE]      = "WHILE",
   };
 
   fprintf(stderr, "%.*s\t%s\n", tk.length, tk.text, name[tk.kind]);

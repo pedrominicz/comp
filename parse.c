@@ -22,7 +22,7 @@ void print_expr(struct node* node, int indent) {
     case ND_NEG: puts("neg"); print_expr(node->lhs, indent + 2); return;
     case ND_NOT: puts("not"); print_expr(node->lhs, indent + 2); return;
     case ND_EXPR_STMT: print_expr(node->lhs, indent); return; // XXX
-    default: die(0, "impossible");
+    default: die(0, "%s:%d: impossible", __FILE__, __LINE__);
   }
 
   print_expr(node->lhs, indent + 2);
@@ -206,6 +206,60 @@ static struct node* stmt(void) {
   if (current.kind == TK_LBRACE) {
     current = lex();
     return block_stmt();
+  }
+
+  if (current.kind == TK_IF) {
+    current = lex();
+
+    struct node* node = alloc(sizeof (struct node));
+    node->kind = ND_IF;
+
+    consume(TK_LPAREN, "expected '('");
+    node->cond = expr();
+    consume(TK_RPAREN, "expected ')'");
+
+    node->then = stmt();
+
+    if (current.kind == TK_ELSE) {
+      current = lex();
+      node->else_ = stmt();
+    }
+
+    return node;
+  }
+
+  if (current.kind == TK_FOR) {
+    current = lex();
+
+    struct node* node = alloc(sizeof (struct node));
+    node->kind = ND_FOR;
+
+    consume(TK_LPAREN, "expected '('");
+
+    if (current.kind != TK_SEMICOLON) node->init = expr();
+    consume(TK_SEMICOLON, "expected ';'");
+    if (current.kind != TK_SEMICOLON) node->cond = expr();
+    consume(TK_SEMICOLON, "expected ';'");
+    if (current.kind != TK_RPAREN) node->step = expr();
+
+    consume(TK_RPAREN, "expected ')'");
+
+    node->body = stmt();
+
+    return node;
+  }
+
+  if (current.kind == TK_WHILE) {
+    current = lex();
+
+    struct node* node = alloc(sizeof (struct node));
+    node->kind = ND_FOR;
+    consume(TK_LPAREN, "expected '('");
+    node->cond = expr();
+    consume(TK_RPAREN, "expected ')'");
+    node->body = stmt();
+
+    return node;
   }
 
   struct node* node = new_unary(ND_EXPR_STMT, expr());

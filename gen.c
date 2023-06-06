@@ -1,5 +1,10 @@
 #include "all.h"
 
+static int count(void) {
+  static int counter = 0;
+  return ++counter;
+}
+
 static void gen_addr(struct node* node) {
   if (node->kind == ND_VAR) {
     printf("  lea %d(%%rbp), %%rax\n", node->var->offset);
@@ -8,6 +13,9 @@ static void gen_addr(struct node* node) {
 
   die(0, "left-hand side of an assignment expression must be a variable");
 }
+
+static void gen_expr(struct node* node);
+static void gen_stmt(struct node* node);
 
 static void gen_expr(struct node* node) {
   switch (node->kind) {
@@ -68,7 +76,7 @@ static void gen_expr(struct node* node) {
       return;
   }
 
-  die(0, "impossible");
+  die(0, "%s:%d: impossible", __FILE__, __LINE__);
 }
 
 static void gen_stmt(struct node* node) {
@@ -85,9 +93,50 @@ static void gen_stmt(struct node* node) {
         gen_stmt(node);
       }
       return;
+    case ND_IF: {
+      int i = count();
+
+      gen_expr(node->cond);
+      puts("  test %rax, %rax");
+
+      if (node->else_) {
+        printf("  jz .L.else.%d\n", i);
+        gen_stmt(node->then);
+        printf("  jmp .L.end.%d\n", i);
+        printf(".L.else.%d:\n", i);
+        gen_stmt(node->else_);
+        printf(".L.end.%d:\n", i);
+      } else {
+        printf("  jz .L.end.%d\n", i);
+        gen_stmt(node->then);
+        printf("  jmp .L.end.%d\n", i);
+        printf(".L.end.%d:\n", i);
+      }
+
+      return;
+    }
+    case ND_FOR: {
+      int i = count();
+
+      if (node->init) gen_expr(node->init);
+      printf(".L.loop.%d:\n", i);
+
+      if (node->cond) {
+        gen_expr(node->cond);
+        puts("  test %rax, %rax");
+        printf("  jz .L.end.%d\n", i);
+      }
+
+      gen_stmt(node->body);
+      if (node->step) gen_expr(node->step);
+      printf("  jmp .L.loop.%d\n", i);
+      printf(".L.end.%d:\n", i);
+
+      return;
+    }
   }
 
-  die(0, "impossible");
+  die(0, "%s:%d: impossible", __FILE__, __LINE__);
 }
 
 void gen(struct fn* fn) {
