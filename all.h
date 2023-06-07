@@ -39,6 +39,7 @@ enum {
   TK_ELSE,
   TK_FOR,
   TK_WHILE,
+  TK_LET,
 };
 
 struct token {
@@ -94,6 +95,7 @@ enum {
 struct var {
   struct var* next;
   char* name;
+  struct type* type;
   int offset;
 };
 
@@ -119,7 +121,7 @@ struct fn {
   int stack_size;
 };
 
-void print_expr(struct node* node, int indent);
+void print_expr(struct node* node);
 void parse_init(char* source);
 struct fn* parse(void);
 

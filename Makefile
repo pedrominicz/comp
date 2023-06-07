@@ -1,6 +1,6 @@
 CFLAGS = -g -Wall -Werror -Wfatal-errors -O2
 
-SRC := gen.c lex.c main.c parse.c type.c
+SRC := $(wildcard *.c)
 OBJ := $(SRC:%.c=.build/%.o)
 
 all: m

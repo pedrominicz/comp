@@ -131,7 +131,7 @@ static void gen_stmt(struct node* node) {
     case ND_FOR: {
       int i = count();
 
-      if (node->init) gen_expr(node->init);
+      if (node->init) gen_stmt(node->init);
       printf(".L.loop.%d:\n", i);
 
       if (node->cond) {

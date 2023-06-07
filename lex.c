@@ -45,6 +45,7 @@ struct token lex(void) {
     if (tk.length == 4 && !strncmp("else",   tk.text, tk.length)) tk.kind = TK_ELSE;
     if (tk.length == 3 && !strncmp("for",    tk.text, tk.length)) tk.kind = TK_FOR;
     if (tk.length == 5 && !strncmp("while",  tk.text, tk.length)) tk.kind = TK_WHILE;
+    if (tk.length == 3 && !strncmp("let",    tk.text, tk.length)) tk.kind = TK_LET;
 
     return tk;
   }
@@ -98,6 +99,7 @@ void print_token(struct token tk) {
     [TK_ELSE]       = "ELSE",
     [TK_FOR]        = "FOR",
     [TK_WHILE]      = "WHILE",
+    [TK_LET]        = "LET",
   };
 
   fprintf(stderr, "%.*s\t%s\n", tk.length, tk.text, name[tk.kind]);

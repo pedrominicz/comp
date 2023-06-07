@@ -8,7 +8,7 @@ void parse_init(char* source) {
   current = lex();
 }
 
-void print_expr(struct node* node, int indent) {
+static void print_indented_expr(struct node* node, int indent) {
   if (!node) return;
 
   fprintf(stderr, "%*s", indent, ""); // print indent many spaces
@@ -32,8 +32,12 @@ void print_expr(struct node* node, int indent) {
 
   fputc('\n', stderr);
 
-  print_expr(node->lhs, indent + 2);
-  print_expr(node->rhs, indent + 2);
+  print_indented_expr(node->lhs, indent + 2);
+  print_indented_expr(node->rhs, indent + 2);
+}
+
+void print_expr(struct node* node) {
+  print_indented_expr(node, 0);
 }
 
 static struct node* new_unary(int kind, struct node* lhs) {
@@ -51,10 +55,12 @@ static struct node* new_binary(int kind, struct node* lhs, struct node* rhs) {
   return node;
 }
 
-static void consume(int kind, char* msg) {
+static struct token consume(int kind, char* msg) {
   if (current.kind != kind)
     die(current.line, msg);
+  struct token previous = current;
   current = lex();
+  return previous;
 }
 
 static struct node* expr(void);
@@ -199,15 +205,22 @@ static struct node* prefix_expr(void) {
   }
 }
 
-static struct var* new_var(void) {
+static struct var* find_var(struct token tk) {
   for (struct var* var = locals; var; var = var->next) {
-    if (strlen(var->name) == current.length && !strncmp(var->name, current.text, current.length)) {
+    if (strlen(var->name) == tk.length && !strncmp(var->name, tk.text, tk.length)) {
       return var;
     }
   }
 
-  struct var* var = alloc(sizeof (struct var));
-  var->name = strndup(current.text, current.length);
+  return NULL;
+}
+
+static struct var* new_var(struct token tk) {
+  struct var* var = find_var(tk);
+  if (var) return var;
+
+  var = alloc(sizeof (struct var));
+  var->name = strndup(tk.text, tk.length);
   var->next = locals;
   locals = var;
 
@@ -227,7 +240,8 @@ static struct node* simple_expr(void) {
     case TK_IDENT:
       node = alloc(sizeof (struct node));
       node->kind = ND_VAR;
-      node->var = new_var();
+      node->var = find_var(current);
+      if (!node->var) die(current.line, "undefined variable '%.*s'", current.length, current.text);
       current = lex();
       break;
     case TK_LPAREN:
@@ -242,18 +256,11 @@ static struct node* simple_expr(void) {
 }
 
 static struct node* stmt(void);
+static struct node* let_stmt(void);
+static struct node* expr_stmt(void);
 static struct node* block_stmt(void);
 
 static struct node* stmt(void) {
-  if (current.kind == TK_SEMICOLON) {
-    current = lex();
-
-    struct node* node = alloc(sizeof (struct node));
-    node->kind = ND_BLOCK;
-
-    return node;
-  }
-
   if (current.kind == TK_RETURN) {
     current = lex();
 
@@ -296,12 +303,15 @@ static struct node* stmt(void) {
 
     consume(TK_LPAREN, "expected '('");
 
-    if (current.kind != TK_SEMICOLON) node->init = expr();
-    consume(TK_SEMICOLON, "expected ';'");
+    if (current.kind == TK_LET) {
+      node->init = let_stmt();
+    } else {
+      node->init = expr_stmt();
+    }
+
     if (current.kind != TK_SEMICOLON) node->cond = expr();
     consume(TK_SEMICOLON, "expected ';'");
     if (current.kind != TK_RPAREN) node->step = expr();
-
     consume(TK_RPAREN, "expected ')'");
 
     node->body = stmt();
@@ -318,6 +328,38 @@ static struct node* stmt(void) {
     node->cond = expr();
     consume(TK_RPAREN, "expected ')'");
     node->body = stmt();
+
+    return node;
+  }
+
+  if (current.kind == TK_LET) return let_stmt();
+
+  return expr_stmt();
+}
+
+static struct node* let_stmt(void) {
+  current = lex();
+
+  struct node* lhs = alloc(sizeof (struct node));
+  lhs->kind = ND_VAR;
+  lhs->var = new_var(consume(TK_IDENT, "expected an identifier"));
+
+  consume(TK_ASSIGN, "expected '='");
+  struct node* rhs = expr();
+  consume(TK_SEMICOLON, "expected ';'");
+
+  type(rhs);
+  lhs->var->type = rhs->type;
+
+  return new_unary(ND_EXPR_STMT, new_binary(ND_ASSIGN, lhs, rhs));
+}
+
+static struct node* expr_stmt(void) {
+  if (current.kind == TK_SEMICOLON) {
+    current = lex();
+
+    struct node* node = alloc(sizeof (struct node));
+    node->kind = ND_BLOCK;
 
     return node;
   }

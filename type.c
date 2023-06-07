@@ -15,14 +15,16 @@ void type(struct node* node) {
   type(node->step);
 
   switch (node->kind) {
+    case ND_VAR:
+      node->type = node->var->type;
+      break;
     case ND_ADD: case ND_SUB:
     case ND_MUL: case ND_DIV:
     case ND_NEG: case ND_ASSIGN:
       node->type = node->lhs->type;
       break;
-    case ND_VAR: case ND_NUM:
+    case ND_NUM: case ND_NOT:
     case ND_EQ: case ND_LE:
-    case ND_NOT:
       node->type = int_;
       break;
     case ND_REF:
@@ -31,11 +33,10 @@ void type(struct node* node) {
       node->type->base = node->lhs->type;
       break;
     case ND_DEREF:
-      if (node->lhs->type->kind == TY_REF) {
-        node->type = node->lhs->type->base;
-      } else {
-        node->type = int_;
+      if (node->lhs->type->kind != TY_REF) {
+        die(0, "invalid dereference"); // TODO line number
       }
+      node->type = node->lhs->type->base;
       break;
   }
 
