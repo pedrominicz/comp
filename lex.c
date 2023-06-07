@@ -63,6 +63,7 @@ struct token lex(void) {
     case '<': return new_token(*current == '=' ? ++current, TK_LE : TK_LT);
     case '>': return new_token(*current == '=' ? ++current, TK_GE : TK_GT);
     case ';': return new_token(TK_SEMICOLON);
+    case ',': return new_token(TK_COMMA);
     case '{': return new_token(TK_LBRACE);
     case '}': return new_token(TK_RBRACE);
   }
@@ -92,6 +93,7 @@ void print_token(struct token tk) {
     [TK_REF]        = "REF",
     [TK_ASSIGN]     = "ASSIGN",
     [TK_SEMICOLON]  = "SEMICOLON",
+    [TK_COMMA]      = "COMMA",
     [TK_RETURN]     = "RETURN",
     [TK_LBRACE]     = "LBRACE",
     [TK_RBRACE]     = "RBRACE",

@@ -188,14 +188,18 @@ static struct var* find_var(struct token tk) {
     }
   }
 
-  return NULL;
+  die(tk.line, "undefined variable '%.*s'", tk.length, tk.text);
+  return NULL; // silence warning
 }
 
 static struct var* new_var(struct token tk) {
-  struct var* var = find_var(tk);
-  if (var) return var;
+  for (struct var* var = locals; var; var = var->next) {
+    if (strlen(var->name) == tk.length && !strncmp(var->name, tk.text, tk.length)) {
+      return var;
+    }
+  }
 
-  var = alloc(sizeof (struct var));
+  struct var* var = alloc(sizeof (struct var));
   var->name = strndup(tk.text, tk.length);
   var->next = locals;
   locals = var;
@@ -212,23 +216,30 @@ static struct node* simple_expr(void) {
     return node;
   }
 
+  if (current.kind == TK_IDENT && lookahead.kind == TK_LPAREN) {
+    struct node* node = alloc(sizeof (struct node));
+    node->kind = ND_CALL;
+    node->fn = strndup(current.text, current.length);
+    next(); // identifier
+    next(); // (
+
+    struct node head = {0};
+    struct node* iter = &head;
+    while (current.kind != TK_RPAREN) {
+      if (iter != &head) consume(TK_COMMA, "expected ')' or ','");
+      iter = iter->next = expr();
+    }
+    next(); // )
+    node->args = head.next;
+
+    return node;
+  }
+
   if (current.kind == TK_IDENT) {
     struct node* node = alloc(sizeof (struct node));
-
-    if (lookahead.kind == TK_LPAREN) {
-      node->kind = ND_CALL;
-      node->fn = strndup(current.text, current.length);
-      next(); // identifier
-      next(); // (
-      consume(TK_RPAREN, "expected ')'");
-    } else {
-      struct var* var = find_var(current);
-      if (!var) die(current.line, "undefined variable '%.*s'", current.length, current.text);
-      next();
-      node->kind = ND_VAR;
-      node->var = var;
-    }
-
+    node->kind = ND_VAR;
+    node->var = find_var(current);
+    next();
     return node;
   }
 
@@ -384,16 +395,16 @@ static struct node* simple_stmt(void) {
 
 static struct node* block_stmt(void) {
   struct node head = {0};
-  struct node* node = &head;
+  struct node* iter = &head;
 
   while (current.kind != TK_RBRACE) {
-    node = node->next = stmt();
-    type(node);
+    iter = iter->next = stmt();
+    type(iter);
   }
 
-  next();
+  next(); // }
 
-  node = alloc(sizeof (struct node));
+  struct node* node = alloc(sizeof (struct node));
   node->kind = ND_BLOCK;
   node->body = head.next;
 

@@ -32,6 +32,7 @@ enum {
   TK_REF, // &
   TK_ASSIGN,
   TK_SEMICOLON,
+  TK_COMMA,
   TK_RETURN,
   TK_LBRACE,
   TK_RBRACE,
@@ -114,6 +115,7 @@ struct node {
   struct node* step;
   struct var* var;
   char* fn;           // function call
+  struct node* args;
   int value;
 };
 

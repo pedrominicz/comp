@@ -1,5 +1,8 @@
 #include "all.h"
 
+// System V Application Binary Interface (section 3.2.3)
+static char* regs[] = { "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9" };
+
 static int count(void) {
   static int counter = 0;
   return ++counter;
@@ -49,10 +52,23 @@ static void gen_expr(struct node* node) {
     case ND_REF:
       gen_addr(node->lhs);
       return;
-    case ND_CALL:
+    case ND_CALL: {
+      int args = 0;
+      for (struct node* arg = node->args; arg; arg = arg->next) {
+        gen_expr(arg);
+        puts("  push %rax");
+        ++args;
+      }
+      if (args > 6) die(0, "too many arguments (max 6)"); // TODO line
+
+      for (int i = args - 1; i >= 0; --i) {
+        printf("  pop %s\n", regs[i]);
+      }
+
       puts("  xor %rax, %rax");
       printf("  call %s\n", node->fn);
       return;
+    }
   }
 
   gen_expr(node->rhs);
