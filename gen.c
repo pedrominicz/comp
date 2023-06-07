@@ -10,7 +10,7 @@ static void gen_expr(struct node* node);
 static void gen_stmt(struct node* node);
 
 static void gen_addr(struct node* node) {
-  if (node->kind == ND_VAR) {
+  if (node->kind == ND_VAR || node->kind == ND_ASSIGN) {
     printf("  lea %d(%%rbp), %%rax\n", node->var->offset);
     return;
   }
@@ -49,12 +49,9 @@ static void gen_expr(struct node* node) {
     case ND_REF:
       gen_addr(node->lhs);
       return;
-    case ND_ASSIGN:
-      gen_addr(node->lhs);
-      puts("  push %rax");
-      gen_expr(node->rhs);
-      puts("  pop %rdi");
-      puts("  mov %rax, (%rdi)");
+    case ND_CALL:
+      puts("  xor %rax, %rax");
+      printf("  call %s\n", node->fn);
       return;
   }
 
@@ -96,6 +93,13 @@ static void gen_stmt(struct node* node) {
   switch (node->kind) {
     case ND_EXPR_STMT:
       gen_expr(node->lhs);
+      return;
+    case ND_ASSIGN:
+      gen_addr(node);
+      puts("  push %rax");
+      gen_expr(node->rhs);
+      puts("  pop %rdi");
+      puts("  mov %rax, (%rdi)");
       return;
     case ND_RETURN:
       gen_expr(node->lhs);
@@ -141,7 +145,7 @@ static void gen_stmt(struct node* node) {
       }
 
       gen_stmt(node->body);
-      if (node->step) gen_expr(node->step);
+      if (node->step) gen_stmt(node->step);
       printf("  jmp .L.loop.%d\n", i);
       printf(".L.end.%d:\n", i);
 

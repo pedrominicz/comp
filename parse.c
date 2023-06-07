@@ -1,11 +1,18 @@
 #include "all.h"
 
 static struct token current;
+static struct token lookahead;
 static struct var* locals; // variables created during parsing
 
 void parse_init(char* source) {
   lex_init(source);
   current = lex();
+  lookahead = lex();
+}
+
+static void next(void) {
+  current = lookahead;
+  lookahead = lex();
 }
 
 static void print_indented_expr(struct node* node, int indent) {
@@ -56,55 +63,29 @@ static struct node* new_binary(int kind, struct node* lhs, struct node* rhs) {
 }
 
 static struct token consume(int kind, char* msg) {
-  if (current.kind != kind)
-    die(current.line, msg);
+  if (current.kind != kind) die(current.line, msg);
   struct token previous = current;
-  current = lex();
+  next();
   return previous;
 }
 
 static struct node* expr(void);
-static struct node* eq_expr(void);
 static struct node* add_expr(void);
 static struct node* mul_expr(void);
 static struct node* prefix_expr(void);
 static struct node* simple_expr(void);
 
-// assignment (non-associative)
-static struct node* expr(void) {
-  struct node* node = eq_expr();
-
-  if (current.kind == TK_ASSIGN) {
-    current = lex();
-    return new_binary(ND_ASSIGN, node, eq_expr());
-  }
-
-  return node;
-}
-
 // comparison or equality (non-associative)
-static struct node* eq_expr(void) {
+static struct node* expr(void) {
   struct node* node = add_expr();
 
   switch (current.kind) {
-    case TK_EQ:
-      current = lex();
-      return new_binary(ND_EQ, node, mul_expr());
-    case TK_NE:
-      current = lex();
-      return new_unary(ND_NOT, new_binary(ND_EQ, node, mul_expr()));
-    case TK_LT:
-      current = lex();
-      return new_unary(ND_NOT, new_binary(ND_LE, mul_expr(), node));
-    case TK_LE:
-      current = lex();
-      return new_binary(ND_LE, node, mul_expr());
-    case TK_GT:
-      current = lex();
-      return new_unary(ND_NOT, new_binary(ND_LE, node, mul_expr()));
-    case TK_GE:
-      current = lex();
-      return new_binary(ND_LE, mul_expr(), node);
+    case TK_EQ: next(); return new_binary(ND_EQ, node, mul_expr());
+    case TK_NE: next(); return new_unary(ND_NOT, new_binary(ND_EQ, node, mul_expr()));
+    case TK_LT: next(); return new_unary(ND_NOT, new_binary(ND_LE, mul_expr(), node));
+    case TK_LE: next(); return new_binary(ND_LE, node, mul_expr());
+    case TK_GT: next(); return new_unary(ND_NOT, new_binary(ND_LE, node, mul_expr()));
+    case TK_GE: next(); return new_binary(ND_LE, mul_expr(), node);
     default: return node;
   }
 }
@@ -170,8 +151,8 @@ static struct node* add_expr(void) {
 
   for (;;) {
     switch (current.kind) {
-      case TK_ADD: current = lex(); node = add(node, mul_expr()); break;
-      case TK_SUB: current = lex(); node = sub(node, mul_expr()); break;
+      case TK_ADD: next(); node = add(node, mul_expr()); break;
+      case TK_SUB: next(); node = sub(node, mul_expr()); break;
       default: return node;
     }
   }
@@ -181,26 +162,21 @@ static struct node* mul_expr(void) {
   struct node* node = prefix_expr();
 
   for (;;) {
-    int kind;
-
     switch (current.kind) {
-      case TK_MUL: kind = ND_MUL; break;
-      case TK_DIV: kind = ND_DIV; break;
+      case TK_MUL: next(); node = new_binary(ND_MUL, node, prefix_expr()); break;
+      case TK_DIV: next(); node = new_binary(ND_DIV, node, prefix_expr()); break;
       default: return node;
     }
-
-    current = lex();
-    node = new_binary(kind, node, prefix_expr());
   }
 }
 
 static struct node* prefix_expr(void) {
   switch (current.kind) {
-    case TK_ADD: current = lex(); return prefix_expr();
-    case TK_SUB: current = lex(); return new_unary(ND_NEG, prefix_expr());
-    case TK_NOT: current = lex(); return new_unary(ND_NOT, prefix_expr());
-    case TK_REF: current = lex(); return new_unary(ND_REF, prefix_expr());
-    case TK_MUL: current = lex(); return new_unary(ND_DEREF, prefix_expr());
+    case TK_ADD: next(); return prefix_expr();
+    case TK_SUB: next(); return new_unary(ND_NEG, prefix_expr());
+    case TK_NOT: next(); return new_unary(ND_NOT, prefix_expr());
+    case TK_REF: next(); return new_unary(ND_REF, prefix_expr());
+    case TK_MUL: next(); return new_unary(ND_DEREF, prefix_expr());
     default: return simple_expr();
   }
 }
@@ -228,41 +204,53 @@ static struct var* new_var(struct token tk) {
 }
 
 static struct node* simple_expr(void) {
-  struct node* node = NULL;
-
-  switch (current.kind) {
-    case TK_NUM:
-      node = alloc(sizeof (struct node));
-      node->kind = ND_NUM;
-      node->value = strtoul(current.text, NULL, 10);
-      current = lex();
-      break;
-    case TK_IDENT:
-      node = alloc(sizeof (struct node));
-      node->kind = ND_VAR;
-      node->var = find_var(current);
-      if (!node->var) die(current.line, "undefined variable '%.*s'", current.length, current.text);
-      current = lex();
-      break;
-    case TK_LPAREN:
-      current = lex();
-      node = expr();
-      consume(TK_RPAREN, "expected ')'");
-      break;
-    default: die(current.line, "expected an expression");
+  if (current.kind == TK_NUM) {
+    struct node* node = alloc(sizeof (struct node));
+    node->kind = ND_NUM;
+    node->value = strtoul(current.text, NULL, 10);
+    next();
+    return node;
   }
 
-  return node;
+  if (current.kind == TK_IDENT) {
+    struct node* node = alloc(sizeof (struct node));
+
+    if (lookahead.kind == TK_LPAREN) {
+      node->kind = ND_CALL;
+      node->fn = strndup(current.text, current.length);
+      next(); // identifier
+      next(); // (
+      consume(TK_RPAREN, "expected ')'");
+    } else {
+      struct var* var = find_var(current);
+      if (!var) die(current.line, "undefined variable '%.*s'", current.length, current.text);
+      next();
+      node->kind = ND_VAR;
+      node->var = var;
+    }
+
+    return node;
+  }
+
+  if (current.kind == TK_LPAREN) {
+    next();
+    struct node* node = expr();
+    consume(TK_RPAREN, "expected ')'");
+    return node;
+  }
+
+  die(current.line, "expected an expression");
+  return NULL; // silence warning
 }
 
 static struct node* stmt(void);
 static struct node* let_stmt(void);
-static struct node* expr_stmt(void);
+static struct node* simple_stmt(void);
 static struct node* block_stmt(void);
 
 static struct node* stmt(void) {
   if (current.kind == TK_RETURN) {
-    current = lex();
+    next();
 
     struct node* node = new_unary(ND_RETURN, expr());
     consume(TK_SEMICOLON, "expected ';'");
@@ -271,12 +259,12 @@ static struct node* stmt(void) {
   }
 
   if (current.kind == TK_LBRACE) {
-    current = lex();
+    next();
     return block_stmt();
   }
 
   if (current.kind == TK_IF) {
-    current = lex();
+    next();
 
     struct node* node = alloc(sizeof (struct node));
     node->kind = ND_IF;
@@ -288,7 +276,7 @@ static struct node* stmt(void) {
     node->then = stmt();
 
     if (current.kind == TK_ELSE) {
-      current = lex();
+      next();
       node->else_ = stmt();
     }
 
@@ -296,7 +284,7 @@ static struct node* stmt(void) {
   }
 
   if (current.kind == TK_FOR) {
-    current = lex();
+    next();
 
     struct node* node = alloc(sizeof (struct node));
     node->kind = ND_FOR;
@@ -306,12 +294,23 @@ static struct node* stmt(void) {
     if (current.kind == TK_LET) {
       node->init = let_stmt();
     } else {
-      node->init = expr_stmt();
+      node->init = simple_stmt();
     }
 
     if (current.kind != TK_SEMICOLON) node->cond = expr();
     consume(TK_SEMICOLON, "expected ';'");
-    if (current.kind != TK_RPAREN) node->step = expr();
+
+    if (current.kind == TK_IDENT && lookahead.kind == TK_ASSIGN) {
+      node->step = alloc(sizeof (struct node));
+      node->step->kind = ND_ASSIGN;
+      node->step->var = find_var(current);
+      next(); // identifier
+      next(); // =
+      node->step->rhs = expr();
+    } else if (current.kind != TK_RPAREN) {
+      node->step = new_unary(ND_EXPR_STMT, expr());
+    }
+
     consume(TK_RPAREN, "expected ')'");
 
     node->body = stmt();
@@ -320,7 +319,7 @@ static struct node* stmt(void) {
   }
 
   if (current.kind == TK_WHILE) {
-    current = lex();
+    next();
 
     struct node* node = alloc(sizeof (struct node));
     node->kind = ND_FOR;
@@ -334,32 +333,45 @@ static struct node* stmt(void) {
 
   if (current.kind == TK_LET) return let_stmt();
 
-  return expr_stmt();
+  return simple_stmt();
 }
 
 static struct node* let_stmt(void) {
-  current = lex();
+  next();
 
-  struct node* lhs = alloc(sizeof (struct node));
-  lhs->kind = ND_VAR;
-  lhs->var = new_var(consume(TK_IDENT, "expected an identifier"));
+  struct node* node = alloc(sizeof (struct node));
+  node->kind = ND_ASSIGN;
+  node->var = new_var(consume(TK_IDENT, "expected an identifier"));
 
   consume(TK_ASSIGN, "expected '='");
-  struct node* rhs = expr();
+  node->rhs = expr();
   consume(TK_SEMICOLON, "expected ';'");
 
-  type(rhs);
-  lhs->var->type = rhs->type;
+  type(node->rhs);
+  node->var->type = node->rhs->type;
 
-  return new_unary(ND_EXPR_STMT, new_binary(ND_ASSIGN, lhs, rhs));
+  return node;
 }
 
-static struct node* expr_stmt(void) {
+static struct node* simple_stmt(void) {
   if (current.kind == TK_SEMICOLON) {
-    current = lex();
+    next();
 
     struct node* node = alloc(sizeof (struct node));
     node->kind = ND_BLOCK;
+
+    return node;
+  }
+
+  if (current.kind == TK_IDENT && lookahead.kind == TK_ASSIGN) {
+    struct node* node = alloc(sizeof (struct node));
+    node->kind = ND_ASSIGN;
+    node->var = find_var(current);
+    next(); // identifier
+    next(); // =
+
+    node->rhs = expr();
+    consume(TK_SEMICOLON, "expected ';'");
 
     return node;
   }
@@ -379,7 +391,7 @@ static struct node* block_stmt(void) {
     type(node);
   }
 
-  current = lex();
+  next();
 
   node = alloc(sizeof (struct node));
   node->kind = ND_BLOCK;

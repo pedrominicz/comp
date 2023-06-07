@@ -85,6 +85,7 @@ enum {
   ND_REF,
   ND_DEREF,
   ND_ASSIGN,
+  ND_CALL,
   ND_EXPR_STMT,
   ND_RETURN,
   ND_BLOCK,
@@ -112,6 +113,7 @@ struct node {
   struct node* init;  // for (init; cond; step) body
   struct node* step;
   struct var* var;
+  char* fn;           // function call
   int value;
 };
 

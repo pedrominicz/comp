@@ -20,11 +20,12 @@ void type(struct node* node) {
       break;
     case ND_ADD: case ND_SUB:
     case ND_MUL: case ND_DIV:
-    case ND_NEG: case ND_ASSIGN:
+    case ND_NEG:
       node->type = node->lhs->type;
       break;
     case ND_NUM: case ND_NOT:
     case ND_EQ: case ND_LE:
+    case ND_CALL:
       node->type = int_;
       break;
     case ND_REF:
