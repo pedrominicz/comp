@@ -56,6 +56,7 @@ struct token lex(void) {
     case '-': return new_token(TK_SUB);
     case '*': return new_token(TK_MUL);
     case '/': return new_token(TK_DIV);
+    case '&': return new_token(TK_REF);
     case '=': return new_token(*current == '=' ? ++current, TK_EQ : TK_ASSIGN);
     case '!': return new_token(*current == '=' ? ++current, TK_NE : TK_NOT);
     case '<': return new_token(*current == '=' ? ++current, TK_LE : TK_LT);
@@ -87,6 +88,7 @@ void print_token(struct token tk) {
     [TK_GT]         = "GT",
     [TK_GE]         = "GE",
     [TK_NOT]        = "NOT",
+    [TK_REF]        = "REF",
     [TK_ASSIGN]     = "ASSIGN",
     [TK_SEMICOLON]  = "SEMICOLON",
     [TK_RETURN]     = "RETURN",

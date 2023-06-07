@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct node;
+struct type;
+
 void die(int line, char* fmt, ...);
 void* alloc(int size);
 
@@ -26,6 +29,7 @@ enum {
   TK_GT,
   TK_GE,
   TK_NOT,
+  TK_REF, // &
   TK_ASSIGN,
   TK_SEMICOLON,
   TK_RETURN,
@@ -48,6 +52,22 @@ void print_token(struct token tk);
 void lex_init(char* source);
 struct token lex(void);
 
+// type
+
+enum {
+  TY_INT,
+  TY_REF,
+};
+
+struct type {
+  int kind;
+  struct type* base;
+};
+
+extern struct type* int_;
+
+void type(struct node* node);
+
 // parse
 
 enum {
@@ -61,6 +81,8 @@ enum {
   ND_EQ,
   ND_LE,
   ND_NOT,
+  ND_REF,
+  ND_DEREF,
   ND_ASSIGN,
   ND_EXPR_STMT,
   ND_RETURN,
@@ -78,6 +100,7 @@ struct var {
 struct node {
   int kind;
   struct node* next;  // statement after semicolon
+  struct type* type;
   struct node* lhs;
   struct node* rhs;
   struct node* body;  // block statement

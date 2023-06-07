@@ -5,17 +5,23 @@ static int count(void) {
   return ++counter;
 }
 
+static void gen_addr(struct node* node);
+static void gen_expr(struct node* node);
+static void gen_stmt(struct node* node);
+
 static void gen_addr(struct node* node) {
   if (node->kind == ND_VAR) {
     printf("  lea %d(%%rbp), %%rax\n", node->var->offset);
     return;
   }
 
-  die(0, "left-hand side of an assignment expression must be a variable");
-}
+  if (node->kind == ND_DEREF) {
+    gen_expr(node->lhs);
+    return;
+  }
 
-static void gen_expr(struct node* node);
-static void gen_stmt(struct node* node);
+  die(0, "left-hand side of an assignment expression must be a variable"); // TODO line number
+}
 
 static void gen_expr(struct node* node) {
   switch (node->kind) {
@@ -35,6 +41,13 @@ static void gen_expr(struct node* node) {
     case ND_VAR:
       gen_addr(node);
       puts("  mov (%rax), %rax");
+      return;
+    case ND_DEREF:
+      gen_expr(node->lhs);
+      puts("  mov (%rax), %rax");
+      return;
+    case ND_REF:
+      gen_addr(node->lhs);
       return;
     case ND_ASSIGN:
       gen_addr(node->lhs);

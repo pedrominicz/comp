@@ -9,21 +9,28 @@ void parse_init(char* source) {
 }
 
 void print_expr(struct node* node, int indent) {
-  printf("%*s", indent, ""); // print indent many spaces
+  if (!node) return;
+
+  fprintf(stderr, "%*s", indent, ""); // print indent many spaces
 
   switch (node->kind) {
-    case ND_NUM: printf("%d\n", node->value); return;
-    case ND_ADD: puts("add"); break;
-    case ND_SUB: puts("sub"); break;
-    case ND_MUL: puts("mul"); break;
-    case ND_DIV: puts("div"); break;
-    case ND_EQ: puts("eq"); break;
-    case ND_LE: puts("le"); break;
-    case ND_NEG: puts("neg"); print_expr(node->lhs, indent + 2); return;
-    case ND_NOT: puts("not"); print_expr(node->lhs, indent + 2); return;
-    case ND_EXPR_STMT: print_expr(node->lhs, indent); return; // XXX
+    case ND_VAR: fprintf(stderr, "var (%s)", node->var->name); break;
+    case ND_NUM: fprintf(stderr, "num (%d)", node->value); break;
+    case ND_ADD: fputs("add", stderr); break;
+    case ND_SUB: fputs("sub", stderr); break;
+    case ND_MUL: fputs("mul", stderr); break;
+    case ND_DIV: fputs("div", stderr); break;
+    case ND_EQ: fputs("eq", stderr); break;
+    case ND_LE: fputs("le", stderr); break;
+    case ND_NEG: fputs("neg", stderr); break;
+    case ND_NOT: fputs("not", stderr); break;
+    case ND_REF: fputs("ref", stderr); break;
+    case ND_DEREF: fputs("deref", stderr); break;
+    case ND_ASSIGN: fputs("assign", stderr); break;
     default: die(0, "%s:%d: impossible", __FILE__, __LINE__);
   }
+
+  fputc('\n', stderr);
 
   print_expr(node->lhs, indent + 2);
   print_expr(node->rhs, indent + 2);
@@ -32,7 +39,7 @@ void print_expr(struct node* node, int indent) {
 static struct node* new_unary(int kind, struct node* lhs) {
   struct node* node = alloc(sizeof (struct node));
   node->kind = kind;
-  node->lhs = lhs;
+  node->lhs = lhs; // isn't it weird that the operand goes into lhs?
   return node;
 }
 
@@ -96,20 +103,71 @@ static struct node* eq_expr(void) {
   }
 }
 
+static struct node* add(struct node* lhs, struct node* rhs) {
+  type(lhs);
+  type(rhs);
+
+  if (lhs->type->kind == TY_INT && rhs->type->kind == TY_INT) {
+    return new_binary(ND_ADD, lhs, rhs);
+  }
+
+  if (lhs->type->kind == TY_REF && rhs->type->kind == TY_REF) {
+    die(0, "invalid operands for addition"); // TODO line number
+  }
+
+  // canonicalize `num + ref` to `ref + num`
+  if (lhs->type->kind == TY_INT && rhs->type->kind == TY_REF) {
+    struct node* tmp = lhs;
+    lhs = rhs;
+    rhs = tmp;
+  }
+
+  struct node* sizeof_int = alloc(sizeof (struct node));
+  sizeof_int->kind = ND_NUM;
+  sizeof_int->value = 8;
+
+  rhs = new_binary(ND_MUL, rhs, sizeof_int);
+  return new_binary(ND_ADD, lhs, rhs);
+}
+
+static struct node* sub(struct node* lhs, struct node* rhs) {
+  type(lhs);
+  type(rhs);
+
+  if (lhs->type->kind == TY_INT && rhs->type->kind == TY_INT) {
+    return new_binary(ND_SUB, lhs, rhs);
+  }
+
+  if (lhs->type->kind == TY_INT && rhs->type->kind == TY_REF) {
+    die(0, "invalid operands for subtraction"); // TODO line number
+  }
+
+  struct node* sizeof_int = alloc(sizeof (struct node));
+  sizeof_int->kind = ND_NUM;
+  sizeof_int->value = 8;
+
+  if (rhs->type->kind == TY_INT) {
+    // ref - int
+    rhs = new_binary(ND_MUL, rhs, sizeof_int);
+    return new_binary(ND_SUB, lhs, rhs);
+  } else {
+    // ref - ref
+    struct node* node = new_binary(ND_SUB, lhs, rhs);
+    node->type = int_; // if not set, `type` will think this expression results
+                       // in a reference
+    return new_binary(ND_DIV, node, sizeof_int);
+  }
+}
+
 static struct node* add_expr(void) {
   struct node* node = mul_expr();
 
   for (;;) {
-    int kind;
-
     switch (current.kind) {
-      case TK_ADD: kind = ND_ADD; break;
-      case TK_SUB: kind = ND_SUB; break;
+      case TK_ADD: current = lex(); node = add(node, mul_expr()); break;
+      case TK_SUB: current = lex(); node = sub(node, mul_expr()); break;
       default: return node;
     }
-
-    current = lex();
-    node = new_binary(kind, node, mul_expr());
   }
 }
 
@@ -135,6 +193,8 @@ static struct node* prefix_expr(void) {
     case TK_ADD: current = lex(); return prefix_expr();
     case TK_SUB: current = lex(); return new_unary(ND_NEG, prefix_expr());
     case TK_NOT: current = lex(); return new_unary(ND_NOT, prefix_expr());
+    case TK_REF: current = lex(); return new_unary(ND_REF, prefix_expr());
+    case TK_MUL: current = lex(); return new_unary(ND_DEREF, prefix_expr());
     default: return simple_expr();
   }
 }
@@ -274,6 +334,7 @@ static struct node* block_stmt(void) {
 
   while (current.kind != TK_RBRACE) {
     node = node->next = stmt();
+    type(node);
   }
 
   current = lex();

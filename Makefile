@@ -1,6 +1,6 @@
-CFLAGS = -pedantic -Wall -Werror -Wfatal-errors -O2
+CFLAGS = -g -Wall -Werror -Wfatal-errors -O2
 
-SRC := $(wildcard *.c)
+SRC := gen.c lex.c main.c parse.c type.c
 OBJ := $(SRC:%.c=.build/%.o)
 
 all: m
