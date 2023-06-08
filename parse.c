@@ -15,6 +15,13 @@ static void next(void) {
   lookahead = lex();
 }
 
+void print_var(struct var* var) {
+  for (; var; var = var->next) {
+    fprintf(stderr, "%s ", var->name);
+  }
+  fputc('\n', stderr);
+}
+
 static void print_indented_expr(struct node* node, int indent) {
   if (!node) return;
 
@@ -193,17 +200,11 @@ static struct var* find_var(struct token tk) {
 }
 
 static struct var* new_var(struct token tk) {
-  for (struct var* var = locals; var; var = var->next) {
-    if (strlen(var->name) == tk.length && !strncmp(var->name, tk.text, tk.length)) {
-      return var;
-    }
-  }
-
   struct var* var = alloc(sizeof (struct var));
   var->name = strndup(tk.text, tk.length);
+  var->type = int_;
   var->next = locals;
   locals = var;
-
   return var;
 }
 
@@ -348,16 +349,18 @@ static struct node* stmt(void) {
 }
 
 static struct node* let_stmt(void) {
-  next();
+  next(); // TODO create auxiliary match function
 
   struct node* node = alloc(sizeof (struct node));
   node->kind = ND_ASSIGN;
-  node->var = new_var(consume(TK_IDENT, "expected an identifier"));
+  // creating a new variable immediately shadows previous definitions too early
+  struct token tk = consume(TK_IDENT, "expected an identifier");
 
   consume(TK_ASSIGN, "expected '='");
-  node->rhs = expr();
+  node->rhs = expr(); // may use soon to be shadowed variable
   consume(TK_SEMICOLON, "expected ';'");
 
+  node->var = new_var(tk); // shadow previous definition
   type(node->rhs);
   node->var->type = node->rhs->type;
 
@@ -396,7 +399,6 @@ static struct node* simple_stmt(void) {
 static struct node* block_stmt(void) {
   struct node head = {0};
   struct node* iter = &head;
-
   while (current.kind != TK_RBRACE) {
     iter = iter->next = stmt();
     type(iter);
@@ -411,12 +413,48 @@ static struct node* block_stmt(void) {
   return node;
 }
 
-struct fn* parse(void) {
-  consume(TK_LBRACE, "expected '{'");
+struct fn* fn(void) {
+  consume(TK_FN, "expected a function");
 
   struct fn* fn = alloc(sizeof (struct fn));
+  fn->name = strndup(current.text, current.length);
+
+  consume(TK_IDENT, "expected an identifier");
+  consume(TK_LPAREN, "expected '('");
+
+  locals = NULL;
+  if (current.kind != TK_RPAREN) {
+    new_var(consume(TK_IDENT, "expected an identifier"));
+    while (current.kind != TK_RPAREN) {
+      consume(TK_COMMA, "expected ')' or ','");
+      new_var(consume(TK_IDENT, "expected an identifier"));
+    }
+  }
+  next(); // )
+
+  // reverse arguments
+  fn->args = NULL;
+  while (locals) {
+    struct var* tmp = locals->next;
+    locals->next = fn->args;
+    fn->args = locals;
+    locals = tmp;
+  }
+  locals = fn->args;
+
+  consume(TK_LBRACE, "expected '{'");
   fn->body = block_stmt();
   fn->locals = locals;
 
   return fn;
+}
+
+struct fn* parse(void) {
+  struct fn head = {0};
+  struct fn* iter = &head;
+  while (current.kind != TK_EOF) {
+    iter = iter->next = fn();
+  }
+
+  return head.next;
 }

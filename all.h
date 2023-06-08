@@ -41,6 +41,7 @@ enum {
   TK_FOR,
   TK_WHILE,
   TK_LET,
+  TK_FN,
 };
 
 struct token {
@@ -59,6 +60,7 @@ struct token lex(void);
 enum {
   TY_INT,
   TY_REF,
+  TY_FN,
 };
 
 struct type {
@@ -120,11 +122,15 @@ struct node {
 };
 
 struct fn {
-  struct node* body;
+  struct fn* next;
+  char* name;
+  struct var* args;
   struct var* locals;
+  struct node* body;
   int stack_size;
 };
 
+void print_var(struct var* var);
 void print_expr(struct node* node);
 void parse_init(char* source);
 struct fn* parse(void);

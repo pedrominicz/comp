@@ -1,5 +1,7 @@
 #include "all.h"
 
+static struct fn* current_fn;
+
 // System V Application Binary Interface (section 3.2.3)
 static char* regs[] = { "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9" };
 
@@ -119,7 +121,7 @@ static void gen_stmt(struct node* node) {
       return;
     case ND_RETURN:
       gen_expr(node->lhs);
-      puts("  jmp .L.return");
+      printf("  jmp .L.return.%s\n", current_fn->name);
       return;
     case ND_BLOCK:
       for (node = node->body; node; node = node->next) {
@@ -172,26 +174,36 @@ static void gen_stmt(struct node* node) {
   die(0, "%s:%d: impossible", __FILE__, __LINE__);
 }
 
-void gen(struct fn* fn) {
-  int offset = 0;
-  for (struct var* var = fn->locals; var; var = var->next) {
-    offset += 8;
-    var->offset = -offset; // the stack grows downwards
-  }
-  fn->stack_size = offset;
-
+void gen(struct fn* prog) {
   puts("  .text");
-  puts("  .globl  main");
-  puts("main:");
-  puts("  push %rbp");
-  puts("  mov %rsp, %rbp");
-  printf("  sub $%d, %%rsp\n", fn->stack_size);
-  puts("  xor %rax, %rax");
 
-  gen_stmt(fn->body);
+  for (struct fn* fn = prog; fn; fn = fn->next) {
+    int offset = 0;
+    for (struct var* var = fn->locals; var; var = var->next) {
+      offset += 8;
+      var->offset = -offset; // the stack grows downwards
+    }
+    fn->stack_size = offset;
 
-  puts(".L.return:");
-  puts("  mov %rbp, %rsp");
-  puts("  pop %rbp");
-  puts("  ret");
+    printf("  .globl  %s\n", fn->name);
+    printf("%s:\n", fn->name);
+    puts("  push %rbp");
+    puts("  mov %rsp, %rbp");
+    printf("  sub $%d, %%rsp\n", fn->stack_size);
+    puts("  xor %rax, %rax");
+
+    int i = 0;
+    for (struct var* arg = fn->args; arg; arg = arg->next) {
+      printf("  mov %s, %d(%%rbp)\n", regs[i], arg->offset);
+      ++i;
+    }
+
+    current_fn = fn;
+    gen_stmt(fn->body);
+
+    printf(".L.return.%s:\n", fn->name);
+    puts("  mov %rbp, %rsp");
+    puts("  pop %rbp");
+    puts("  ret");
+  }
 }
