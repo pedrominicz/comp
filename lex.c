@@ -5,7 +5,7 @@ static char* start;
 static int line;
 
 static struct token new_token(int kind) {
-  return (struct token){ kind, start, current - start, line };
+  return (struct token){ kind, line, strndup(start, current - start) };
 }
 
 static void skip_whitespace(void) {
@@ -40,13 +40,13 @@ struct token lex(void) {
     while (isalpha(*current) || isdigit(*current)) ++current;
     struct token tk = new_token(TK_IDENT);
 
-    if (tk.length == 6 && !strncmp("return", tk.text, tk.length)) tk.kind = TK_RETURN;
-    if (tk.length == 2 && !strncmp("if",     tk.text, tk.length)) tk.kind = TK_IF;
-    if (tk.length == 4 && !strncmp("else",   tk.text, tk.length)) tk.kind = TK_ELSE;
-    if (tk.length == 3 && !strncmp("for",    tk.text, tk.length)) tk.kind = TK_FOR;
-    if (tk.length == 5 && !strncmp("while",  tk.text, tk.length)) tk.kind = TK_WHILE;
-    if (tk.length == 3 && !strncmp("let",    tk.text, tk.length)) tk.kind = TK_LET;
-    if (tk.length == 2 && !strncmp("fn",     tk.text, tk.length)) tk.kind = TK_FN;
+    if (!strcmp("return", tk.str)) tk.kind = TK_RETURN;
+    if (!strcmp("if",     tk.str)) tk.kind = TK_IF;
+    if (!strcmp("else",   tk.str)) tk.kind = TK_ELSE;
+    if (!strcmp("for",    tk.str)) tk.kind = TK_FOR;
+    if (!strcmp("while",  tk.str)) tk.kind = TK_WHILE;
+    if (!strcmp("let",    tk.str)) tk.kind = TK_LET;
+    if (!strcmp("fn",     tk.str)) tk.kind = TK_FN;
 
     return tk;
   }
@@ -65,6 +65,8 @@ struct token lex(void) {
     case '>': return new_token(*current == '=' ? ++current, TK_GE : TK_GT);
     case ';': return new_token(TK_SEMICOLON);
     case ',': return new_token(TK_COMMA);
+    case '[': return new_token(TK_LBRACKET);
+    case ']': return new_token(TK_RBRACKET);
     case '{': return new_token(TK_LBRACE);
     case '}': return new_token(TK_RBRACE);
   }
@@ -95,6 +97,8 @@ void print_token(struct token tk) {
     [TK_ASSIGN]     = "ASSIGN",
     [TK_SEMICOLON]  = "SEMICOLON",
     [TK_COMMA]      = "COMMA",
+    [TK_LBRACKET]   = "LBRACKET",
+    [TK_RBRACKET]   = "RBRACKET",
     [TK_RETURN]     = "RETURN",
     [TK_LBRACE]     = "LBRACE",
     [TK_RBRACE]     = "RBRACE",
@@ -106,5 +110,5 @@ void print_token(struct token tk) {
     [TK_FN]         = "FN",
   };
 
-  fprintf(stderr, "%.*s\t%s\n", tk.length, tk.text, name[tk.kind]);
+  fprintf(stderr, "%s\t%d\t%s\n", tk.str, tk.line, name[tk.kind]);
 }

@@ -1,11 +1,9 @@
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-struct node;
-struct type;
 
 void die(int line, char* fmt, ...);
 void* alloc(int size);
@@ -33,6 +31,8 @@ enum {
   TK_ASSIGN,
   TK_SEMICOLON,
   TK_COMMA,
+  TK_LBRACKET,
+  TK_RBRACKET,
   TK_RETURN,
   TK_LBRACE,
   TK_RBRACE,
@@ -46,93 +46,100 @@ enum {
 
 struct token {
   int kind;
-  char* text;
-  int length;
   int line;
+  char* str;
 };
 
 void print_token(struct token tk);
 void lex_init(char* source);
 struct token lex(void);
 
-// type
+enum {
+  EXPR_VAR,
+  EXPR_NUM,
+  // binary expressions
+  EXPR_ADD, EXPR_SUB, EXPR_MUL, EXPR_DIV, EXPR_EQ, EXPR_LE,
+  // unary expressions
+  EXPR_NEG, EXPR_NOT, EXPR_REF, EXPR_DEREF,
+  EXPR_CALL,
+};
+
+struct expr {
+  int kind;
+  struct type* type;
+  union {
+    char* var; // EXPR_VAR
+    int value; // EXPR_NUM
+    struct {
+      struct expr* lhs;
+      struct expr* rhs;
+    } binary_expr;
+    struct {
+      struct expr* lhs; // isn't it weird that the operand is called lhs?
+    } unary_expr;
+    struct {
+      char* fn;
+      struct expr* args[6];
+    } call_expr;
+  };
+};
 
 enum {
-  TY_INT,
-  TY_REF,
-  TY_FN,
+  STMT_LET,
+  STMT_ASSIGN,
+  STMT_EXPR,
+  STMT_RETURN,
+  STMT_BLOCK,
+  STMT_IF,
+  STMT_WHILE,
 };
 
-struct type {
+struct stmt {
   int kind;
-  struct type* base;
-};
-
-extern struct type* int_;
-
-void type(struct node* node);
-
-// parse
-
-enum {
-  ND_VAR,
-  ND_NUM,
-  ND_ADD,
-  ND_SUB,
-  ND_MUL,
-  ND_DIV,
-  ND_NEG,
-  ND_EQ,
-  ND_LE,
-  ND_NOT,
-  ND_REF,
-  ND_DEREF,
-  ND_ASSIGN,
-  ND_CALL,
-  ND_EXPR_STMT,
-  ND_RETURN,
-  ND_BLOCK,
-  ND_IF,
-  ND_FOR,
-};
-
-struct var {
-  struct var* next;
-  char* name;
-  struct type* type;
-  int offset;
-};
-
-struct node {
-  int kind;
-  struct node* next;  // statement after semicolon
-  struct type* type;
-  struct node* lhs;
-  struct node* rhs;
-  struct node* body;  // block statement
-  struct node* cond;
-  struct node* then;
-  struct node* else_;
-  struct node* init;  // for (init; cond; step) body
-  struct node* step;
-  struct var* var;
-  char* fn;           // function call
-  struct node* args;
-  int value;
+  struct stmt* next;
+  union {
+    struct {
+      char* var;
+      struct expr* value;
+    } let_stmt, assign_stmt;
+    struct expr* expr; // expression statement
+    struct {
+      struct expr* value;
+    } return_stmt;
+    struct {
+      struct stmt* body;
+    } block_stmt;
+    struct {
+      struct expr* cond;
+      struct stmt* then;
+      struct stmt* else_;
+    } if_stmt;
+    struct {
+      struct expr* cond;
+      struct stmt* loop;
+    } while_stmt;
+  };
 };
 
 struct fn {
   struct fn* next;
   char* name;
-  struct var* args;
-  struct var* locals;
-  struct node* body;
-  int stack_size;
+  char* args[6];
+  struct stmt* body;
 };
 
-void print_var(struct var* var);
-void print_expr(struct node* node);
+// print
+
+void print_expr(struct expr* expr);
+void print_stmt(struct stmt* stmt);
+void print_fn(struct fn* fn);
+
+// parse
+
 void parse_init(char* source);
+struct expr* parse_expr(void);
+struct stmt* parse_stmt(void);
+struct fn* parse_fn(void);
 struct fn* parse(void);
 
 // gen
