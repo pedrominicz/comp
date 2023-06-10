@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define impossible() die(0, "%s:%d: impossible", __FILE__, __LINE__)
+
 void die(int line, char* fmt, ...);
 void* alloc(int size);
 
@@ -102,10 +104,8 @@ struct stmt {
       struct expr* place;
       struct expr* value;
     } assign;
-    struct expr* expr; // expression statement
-    struct {
-      struct expr* value;
-    } return_;
+    struct expr* expr;
+    struct expr* return_;
     struct stmt* block;
     struct {
       struct expr* cond;

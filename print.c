@@ -40,8 +40,8 @@ void print_token(struct token tk) {
 
 void print_expr(struct expr* expr) {
   switch (expr->kind) {
-    case EXPR_VAR: fputs(expr->var, stderr); break;
-    case EXPR_NUM: fprintf(stderr, "%d", expr->value); break;
+    case EXPR_VAR: fputs(expr->var, stderr); return;
+    case EXPR_NUM: fprintf(stderr, "%d", expr->value); return;
     // binary expressions
     case EXPR_ADD: case EXPR_SUB:
     case EXPR_MUL: case EXPR_DIV:
@@ -59,7 +59,7 @@ void print_expr(struct expr* expr) {
       fprintf(stderr, " %s ", op[expr->kind]);
       print_expr(expr->op.rhs);
       fputc(')', stderr);
-      break;
+      return;
     }
     // unary expressions
     case EXPR_NEG: case EXPR_NOT: case EXPR_REF: case EXPR_DEREF: {
@@ -72,7 +72,7 @@ void print_expr(struct expr* expr) {
       fprintf(stderr, "(%s", op[expr->kind]);
       print_expr(expr->op.lhs);
       fputc(')', stderr);
-      break;
+      return;
     }
     case EXPR_CALL:
       fprintf(stderr, "%s(", expr->call.fn);
@@ -84,14 +84,13 @@ void print_expr(struct expr* expr) {
         }
       }
       fputc(')', stderr);
-      break;
-    default: die(0, "%s:%d: impossible", __FILE__, __LINE__);
+      return;
   }
+
+  impossible();
 }
 
 void print_stmt_indented(struct stmt* stmt, bool should_indent, int indent) {
-  if (!stmt) return;
-
   if (should_indent) fprintf(stderr, "%*s", indent, "");
 
   switch (stmt->kind) {
@@ -99,26 +98,26 @@ void print_stmt_indented(struct stmt* stmt, bool should_indent, int indent) {
       fprintf(stderr, "let %s = ", stmt->let.var);
       print_expr(stmt->let.value);
       fputs(";\n", stderr);
-      break;
+      return;
     case STMT_ASSIGN:
       print_expr(stmt->assign.place);
       fputs(" = ", stderr);
       print_expr(stmt->assign.value);
       fputs(";\n", stderr);
-      break;
+      return;
     case STMT_EXPR:
       print_expr(stmt->expr);
       fputs(";\n", stderr);
-      break;
+      return;
     case STMT_RETURN:
-      if (stmt->return_.value) {
+      if (stmt->return_) {
         fputs("return ", stderr);
-        print_expr(stmt->return_.value);
+        print_expr(stmt->return_);
       } else {
         fputs("return", stderr);
       }
       fputs(";\n", stderr);
-      break;
+      return;
     case STMT_BLOCK:
       if (stmt->block) {
         fputs("{\n", stderr);
@@ -127,7 +126,7 @@ void print_stmt_indented(struct stmt* stmt, bool should_indent, int indent) {
       } else {
         fputs("{}\n", stderr);
       }
-      break;
+      return;
     case STMT_IF:
       fputs("if (", stderr);
       print_expr(stmt->if_.cond);
@@ -137,17 +136,16 @@ void print_stmt_indented(struct stmt* stmt, bool should_indent, int indent) {
         fprintf(stderr, "%*selse ", indent, "");
         print_stmt_indented(stmt->if_.else_, false, indent);
       }
-      break;
+      return;
     case STMT_WHILE:
       fputs("while (", stderr);
       print_expr(stmt->while_.cond);
       fputs(") ", stderr);
       print_stmt_indented(stmt->while_.loop, false, indent);
-      break;
-    default: die(0, "%s:%d: impossible", __FILE__, __LINE__);
+      return;
   }
 
-  print_stmt_indented(stmt->next, should_indent, indent);
+  impossible();
 }
 
 void print_stmt(struct stmt* stmt) {

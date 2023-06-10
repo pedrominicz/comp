@@ -169,7 +169,7 @@ struct stmt* parse_stmt(void) {
     struct stmt* stmt = alloc(sizeof (struct stmt));
     stmt->kind = STMT_RETURN;
 
-    stmt->return_.value = parse_expr();
+    stmt->return_ = parse_expr();
     consume(TK_SEMICOLON, "expected ';'");
 
     return stmt;
