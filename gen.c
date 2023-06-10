@@ -2,6 +2,11 @@
 
 static struct fn* current_fn;
 
+static int count(void) {
+  static int counter = 0;
+  return ++counter;
+}
+
 static void gen_addr(struct expr* expr);
 static void gen_expr(struct expr* expr);
 
@@ -107,9 +112,47 @@ static void gen_stmt(struct stmt* stmt) {
         gen_stmt(stmt);
       }
       return;
-    case STMT_IF:
-    case STMT_WHILE:
-      die(0, "%s:%d: TODO", __FILE__, __LINE__);
+    case STMT_IF: {
+      int i = count();
+
+      gen_expr(stmt->if_.cond);
+      puts("  test %rax, %rax");
+
+      if (stmt->if_.else_) {
+        printf("  jz .L.else.%d\n", i);
+
+        gen_stmt(stmt->if_.then);
+        printf("  jmp .L.end.%d\n", i);
+
+        printf(".L.else.%d:\n", i);
+        gen_stmt(stmt->if_.else_);
+      } else {
+        printf("  jz .L.end.%d\n", i);
+
+        gen_stmt(stmt->if_.then);
+        printf("  jmp .L.end.%d\n", i);
+      }
+
+      printf(".L.end.%d:\n", i);
+      return;
+    }
+    case STMT_WHILE: {
+      int i = count();
+
+      printf(".L.loop.%d:\n", i);
+
+      if (stmt->while_.cond) {
+        gen_expr(stmt->while_.cond);
+        puts("  test %rax, %rax");
+        printf("  jz .L.end.%d\n", i);
+      }
+
+      gen_stmt(stmt->while_.loop);
+      printf("  jmp .L.loop.%d\n", i);
+
+      printf(".L.end.%d:\n", i);
+      return;
+    }
   }
 
   impossible();
