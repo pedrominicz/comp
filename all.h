@@ -50,7 +50,6 @@ struct token {
   char* str;
 };
 
-void print_token(struct token tk);
 void lex_init(char* source);
 struct token lex(void);
 
@@ -70,17 +69,14 @@ struct expr {
   union {
     char* var; // EXPR_VAR
     int value; // EXPR_NUM
-    struct {
+    struct { // unary and binary expressions
       struct expr* lhs;
       struct expr* rhs;
-    } binary_expr;
-    struct {
-      struct expr* lhs; // isn't it weird that the operand is called lhs?
-    } unary_expr;
+    } op;
     struct {
       char* fn;
       struct expr* args[6];
-    } call_expr;
+    } call;
   };
 };
 
@@ -101,23 +97,25 @@ struct stmt {
     struct {
       char* var;
       struct expr* value;
-    } let_stmt, assign_stmt;
+    } let;
+    struct {
+      struct expr* place;
+      struct expr* value;
+    } assign;
     struct expr* expr; // expression statement
     struct {
       struct expr* value;
-    } return_stmt;
-    struct {
-      struct stmt* body;
-    } block_stmt;
+    } return_;
+    struct stmt* block;
     struct {
       struct expr* cond;
       struct stmt* then;
       struct stmt* else_;
-    } if_stmt;
+    } if_;
     struct {
       struct expr* cond;
       struct stmt* loop;
-    } while_stmt;
+    } while_;
   };
 };
 
@@ -128,12 +126,6 @@ struct fn {
   struct stmt* body;
 };
 
-// print
-
-void print_expr(struct expr* expr);
-void print_stmt(struct stmt* stmt);
-void print_fn(struct fn* fn);
-
 // parse
 
 void parse_init(char* source);
@@ -142,6 +134,25 @@ struct stmt* parse_stmt(void);
 struct fn* parse_fn(void);
 struct fn* parse(void);
 
+// type
+
+enum {
+  TY_NUM,
+};
+
+struct type {
+  int kind;
+};
+
+void infer_expr(struct expr* expr);
+
 // gen
 
-void gen(struct fn* fn);
+void gen(struct fn* prog);
+
+// print
+
+void print_token(struct token tk);
+void print_expr(struct expr* expr);
+void print_stmt(struct stmt* stmt);
+void print_fn(struct fn* fn);

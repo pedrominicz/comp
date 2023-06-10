@@ -1,6 +1,6 @@
 CFLAGS = -g -Wall -Werror -Wfatal-errors -O2
 
-SRC := lex.c main.c parse.c print.c
+SRC := $(wildcard *.c)
 OBJ := $(SRC:%.c=.build/%.o)
 
 all: m
@@ -15,4 +15,4 @@ m: $(OBJ)
 clean:
 	rm -rf .build m
 
-.PHONY: all clean setup
+.PHONY: all clean

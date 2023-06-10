@@ -29,19 +29,17 @@ static struct token consume(int kind, char* msg) {
   return previous;
 }
 
-static struct expr* new_unary(int kind, struct expr* lhs) {
-  struct expr* expr = alloc(sizeof (struct expr));
-  expr->kind = kind;
-  expr->unary_expr.lhs = lhs;
-  return expr;
-}
-
 static struct expr* new_binary(int kind, struct expr* lhs, struct expr* rhs) {
   struct expr* expr = alloc(sizeof (struct expr));
   expr->kind = kind;
-  expr->binary_expr.lhs = lhs;
-  expr->binary_expr.rhs = rhs;
+  expr->op.lhs = lhs;
+  expr->op.rhs = rhs;
   return expr;
+}
+
+
+static struct expr* new_unary(int kind, struct expr* lhs) {
+  return new_binary(kind, lhs, NULL);
 }
 
 static struct expr* simple_expr(void) {
@@ -56,15 +54,15 @@ static struct expr* simple_expr(void) {
   if (current.kind == TK_IDENT && lookahead.kind == TK_LPAREN) {
     struct expr* expr = alloc(sizeof (struct expr));
     expr->kind = EXPR_CALL;
-    expr->call_expr.fn = current.str;
+    expr->call.fn = current.str;
     next(); // identifier
     next(); // (
 
     if (current.kind != TK_RPAREN) {
-      expr->call_expr.args[0] = parse_expr();
+      expr->call.args[0] = parse_expr();
       for (int i = 1; i < 6 && current.kind != TK_RPAREN; ++i) {
         consume(TK_COMMA, "expected ')' or ','");
-        expr->call_expr.args[i] = parse_expr();
+        expr->call.args[i] = parse_expr();
       }
     }
     consume(TK_RPAREN, "expected ')'");
@@ -138,14 +136,7 @@ struct expr* parse_expr(void) {
   }
 }
 
-static void consume_semicolon(void) {
-  consume(TK_SEMICOLON, "expected ';'");
-  while (match(TK_SEMICOLON)) {}
-}
-
 static struct stmt* block_stmt(void) {
-  while (match(TK_SEMICOLON)) {}
-
   struct stmt head = {0};
   struct stmt* iter = &head;
   while (current.kind != TK_RBRACE) {
@@ -155,26 +146,21 @@ static struct stmt* block_stmt(void) {
 
   struct stmt* stmt = alloc(sizeof (struct stmt));
   stmt->kind = STMT_BLOCK;
-  stmt->block_stmt.body = head.next;
+  stmt->block = head.next;
 
   return stmt;
 }
 
 struct stmt* parse_stmt(void) {
-  if (match(TK_SEMICOLON)) {
-    struct stmt* stmt = alloc(sizeof (struct stmt));
-    stmt->kind = STMT_BLOCK;
-    return stmt;
-  }
-
   if (match(TK_LET)) {
     struct stmt* stmt = alloc(sizeof (struct stmt));
     stmt->kind = STMT_LET;
-    stmt->let_stmt.var = consume(TK_IDENT, "expected an identifier").str;
 
+    stmt->let.var = consume(TK_IDENT, "expected an identifier").str;
     consume(TK_ASSIGN, "expected '='");
-    stmt->let_stmt.value = parse_expr();
-    consume_semicolon();
+
+    stmt->let.value = parse_expr();
+    consume(TK_SEMICOLON, "expected ';'");
 
     return stmt;
   }
@@ -182,8 +168,10 @@ struct stmt* parse_stmt(void) {
   if (match(TK_RETURN)) {
     struct stmt* stmt = alloc(sizeof (struct stmt));
     stmt->kind = STMT_RETURN;
-    stmt->return_stmt.value = parse_expr();
-    consume_semicolon();
+
+    stmt->return_.value = parse_expr();
+    consume(TK_SEMICOLON, "expected ';'");
+
     return stmt;
   }
 
@@ -194,11 +182,11 @@ struct stmt* parse_stmt(void) {
     stmt->kind = STMT_IF;
 
     consume(TK_LPAREN, "expected '('");
-    stmt->if_stmt.cond = parse_expr();
+    stmt->if_.cond = parse_expr();
     consume(TK_RPAREN, "expected ')'");
 
-    stmt->if_stmt.then = parse_stmt();
-    if (match(TK_ELSE)) stmt->if_stmt.else_ = parse_stmt();
+    stmt->if_.then = parse_stmt();
+    if (match(TK_ELSE)) stmt->if_.else_ = parse_stmt();
 
     return stmt;
   }
@@ -206,28 +194,35 @@ struct stmt* parse_stmt(void) {
   if (match(TK_WHILE)) {
     struct stmt* stmt = alloc(sizeof (struct stmt));
     stmt->kind = STMT_WHILE;
+
     consume(TK_LPAREN, "expected '('");
-    stmt->while_stmt.cond = parse_expr();
+    stmt->while_.cond = parse_expr();
     consume(TK_RPAREN, "expected ')'");
-    stmt->while_stmt.loop = parse_stmt();
+
+    stmt->while_.loop = parse_stmt();
+
     return stmt;
   }
 
-  if (current.kind == TK_IDENT && lookahead.kind == TK_ASSIGN) {
+  struct expr* expr = parse_expr();
+
+  if (match(TK_ASSIGN)) {
     struct stmt* stmt = alloc(sizeof (struct stmt));
     stmt->kind = STMT_ASSIGN;
-    stmt->assign_stmt.var = current.str;
-    next(); // identifier
-    next(); // =
-    stmt->assign_stmt.value = parse_expr();
-    consume_semicolon();
+
+    stmt->assign.place = expr;
+
+    stmt->assign.value = parse_expr();
+    consume(TK_SEMICOLON, "expected ';'");
+
     return stmt;
   }
 
   struct stmt* stmt = alloc(sizeof (struct stmt));
   stmt->kind = STMT_EXPR;
-  stmt->expr = parse_expr();
-  consume_semicolon();
+
+  stmt->expr = expr;
+  consume(TK_SEMICOLON, "expected ';'");
 
   return stmt;
 }
