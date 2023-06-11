@@ -198,11 +198,12 @@ struct stmt* parse_stmt(void) {
     struct stmt* stmt = alloc(sizeof (struct stmt));
     stmt->kind = STMT_LET;
 
-    stmt->let.var = new_var(consume(TK_IDENT, "expected an identifier"));
+    struct token name = consume(TK_IDENT, "expected an identifier");
     consume(TK_ASSIGN, "expected '='");
 
-    stmt->let.value = parse_expr();
+    stmt->let.value = parse_expr(); // can use a previous definition of `name`
     consume(TK_SEMICOLON, "expected ';'");
+    stmt->let.var = new_var(name);  // shadow previous definition
 
     return stmt;
   }
