@@ -2,6 +2,9 @@
 
 static struct fn* current_fn;
 
+// System V Application Binary Interface (section 3.2.3)
+static char* regs[] = { "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9" };
+
 static int count(void) {
   static int counter = 0;
   return ++counter;
@@ -12,8 +15,7 @@ static void gen_expr(struct expr* expr);
 
 static void gen_addr(struct expr* expr) {
   if (expr->kind == EXPR_VAR) {
-    int offset = (expr->var[0] - 'a' + 1) * 8;
-    printf("  lea %d(%%rbp), %%rax\n", -offset);  // the stack grows downwards
+    printf("  lea %d(%%rbp), %%rax\n", expr->var->offset);
     return;
   }
 
@@ -51,8 +53,22 @@ static void gen_expr(struct expr* expr) {
       gen_expr(expr->op.lhs);
       puts("  mov (%rax), %rax");
       return;
-    case EXPR_CALL:
-      die(0, "%s:%d: TODO", __FILE__, __LINE__);
+    case EXPR_CALL: {
+      int args = 0;
+      while (args < MAX_ARGS && expr->call.args[args]) {
+        gen_expr(expr->call.args[args]);
+        puts("  push %rax");
+        ++args;
+      }
+
+      for (int i = args - 1; i >= 0; --i) {
+        printf("  pop %s\n", regs[i]);
+      }
+
+      puts("  xor %rax, %rax");
+      printf("  call %s\n", expr->call.fn);
+      return;
+    }
   }
 
   gen_expr(expr->op.rhs);
@@ -91,8 +107,14 @@ static void gen_expr(struct expr* expr) {
 
 static void gen_stmt(struct stmt* stmt) {
   switch (stmt->kind) {
-    case STMT_LET:
-      die(0, "%s:%d: TODO", __FILE__, __LINE__);
+    case STMT_LET: {
+      printf("  lea %d(%%rbp), %%rax\n", stmt->let.var->offset);
+      puts("  push %rax");
+      gen_expr(stmt->let.value);
+      puts("  pop %rdi");
+      puts("  mov %rax, (%rdi)");
+      return;
+    }
     case STMT_ASSIGN:
       gen_addr(stmt->assign.place);
       puts("  push %rax");
@@ -161,18 +183,27 @@ static void gen_stmt(struct stmt* stmt) {
 void gen(struct fn* prog) {
   puts("  .text");
 
-  for (struct fn* fn = prog; fn; fn = fn->next) {
-    printf("  .globl  %s\n", fn->name);
-    printf("%s:\n", fn->name);
+  for (current_fn = prog; current_fn; current_fn = current_fn->next) {
+    int stack_size = 0;
+    for (int i = 0; i < current_fn->locals_count; ++i) {
+      stack_size += 8;
+      current_fn->locals[i]->offset = -stack_size; // the stack grows downwards
+    }
+
+    printf("  .globl  %s\n", current_fn->name);
+    printf("%s:\n", current_fn->name);
     puts("  push %rbp");
     puts("  mov %rsp, %rbp");
-    puts("  sub $208, %rsp\n");
+    printf("  sub $%d, %%rsp\n", stack_size);
     puts("  xor %rax, %rax");
 
-    current_fn = fn;
-    gen_stmt(fn->body);
+    for (int i = current_fn->args_count - 1; i >= 0; --i) {
+      printf("  mov %s, %d(%%rbp)\n", regs[i], current_fn->locals[i]->offset);
+    }
 
-    printf(".L.return.%s:\n", fn->name);
+    gen_stmt(current_fn->body);
+
+    printf(".L.return.%s:\n", current_fn->name);
     puts("  mov %rbp, %rsp");
     puts("  pop %rbp");
     puts("  ret");

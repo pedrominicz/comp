@@ -40,7 +40,7 @@ void print_token(struct token tk) {
 
 void print_expr(struct expr* expr) {
   switch (expr->kind) {
-    case EXPR_VAR: fputs(expr->var, stderr); return;
+    case EXPR_VAR: fputs(expr->var->name, stderr); return;
     case EXPR_NUM: fprintf(stderr, "%d", expr->value); return;
     // binary expressions
     case EXPR_ADD: case EXPR_SUB:
@@ -78,7 +78,7 @@ void print_expr(struct expr* expr) {
       fprintf(stderr, "%s(", expr->call.fn);
       if (expr->call.args[0]) {
         print_expr(expr->call.args[0]);
-        for (int i = 1; i < 6 && expr->call.args[i]; ++i) {
+        for (int i = 1; i < MAX_ARGS && expr->call.args[i]; ++i) {
           fputs(", ", stderr);
           print_expr(expr->call.args[i]);
         }
@@ -95,7 +95,7 @@ void print_stmt_indented(struct stmt* stmt, bool should_indent, int indent) {
 
   switch (stmt->kind) {
     case STMT_LET:
-      fprintf(stderr, "let %s = ", stmt->let.var);
+      fprintf(stderr, "let %s = ", stmt->let.var->name);
       print_expr(stmt->let.value);
       fputs(";\n", stderr);
       return;
@@ -121,7 +121,9 @@ void print_stmt_indented(struct stmt* stmt, bool should_indent, int indent) {
     case STMT_BLOCK:
       if (stmt->block) {
         fputs("{\n", stderr);
-        print_stmt_indented(stmt->block, true, indent + 2);
+        for (stmt = stmt->block; stmt; stmt = stmt->next) {
+          print_stmt_indented(stmt, true, indent + 2);
+        }
         fprintf(stderr, "%*s}\n", indent, "");
       } else {
         fputs("{}\n", stderr);
@@ -156,10 +158,10 @@ void print_fn(struct fn* fn) {
   if (!fn) return;
 
   fprintf(stderr, "fn %s(", fn->name);
-  if (fn->args[0]) {
-    fputs(fn->args[0], stderr);
-    for (int i = 1; i < 6 && fn->args[i]; ++i) {
-      fprintf(stderr, ", %s", fn->args[i]);
+  if (fn->args_count) {
+    fputs(fn->locals[0]->name, stderr);
+    for (int i = 1; i < fn->args_count; ++i) {
+      fprintf(stderr, ", %s", fn->locals[i]->name);
     }
   }
   fputs(") ", stderr);

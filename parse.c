@@ -3,6 +3,14 @@
 static struct token current;
 static struct token lookahead;
 
+static struct fn* current_fn;
+
+static struct {
+  struct var* locals[MAX_LOCALS];
+  int count;
+  int depth;
+} scope;
+
 void parse_init(char* source) {
   lex_init(source);
   current = lex();
@@ -27,6 +35,31 @@ static struct token consume(int kind, char* msg) {
   struct token previous = current;
   next();
   return previous;
+}
+
+static struct var* find_var() {
+  for (int i = scope.count - 1; i >= 0; --i) {
+    if (strcmp(scope.locals[i]->name, current.str) == 0) {
+      return scope.locals[i];
+    }
+  }
+
+  die(current.line, "undefined variable '%s'", current.str);
+  return NULL; // silence warning
+}
+
+static struct var* new_var(struct token tk) {
+  if (current_fn->locals_count >= MAX_LOCALS) {
+    die(tk.line, "too many local variables (max %d)", MAX_LOCALS);
+  }
+
+  struct var* var = alloc(sizeof (struct var));
+  var->name = tk.str;
+  var->scope = scope.depth;
+
+  current_fn->locals[current_fn->locals_count++] = var;
+  scope.locals[scope.count++] = var;
+  return var;
 }
 
 static struct expr* new_binary(int kind, struct expr* lhs, struct expr* rhs) {
@@ -60,7 +93,7 @@ static struct expr* simple_expr(void) {
 
     if (current.kind != TK_RPAREN) {
       expr->call.args[0] = parse_expr();
-      for (int i = 1; i < 6 && current.kind != TK_RPAREN; ++i) {
+      for (int i = 1; i < MAX_ARGS && current.kind != TK_RPAREN; ++i) {
         consume(TK_COMMA, "expected ')' or ','");
         expr->call.args[i] = parse_expr();
       }
@@ -73,7 +106,7 @@ static struct expr* simple_expr(void) {
   if (current.kind == TK_IDENT) {
     struct expr* expr = alloc(sizeof (struct expr));
     expr->kind = EXPR_VAR;
-    expr->var = current.str;
+    expr->var = find_var();
     next();
     return expr;
   }
@@ -137,6 +170,8 @@ struct expr* parse_expr(void) {
 }
 
 static struct stmt* block_stmt(void) {
+  ++scope.depth;
+
   struct stmt head = {0};
   struct stmt* iter = &head;
   while (current.kind != TK_RBRACE) {
@@ -148,6 +183,13 @@ static struct stmt* block_stmt(void) {
   stmt->kind = STMT_BLOCK;
   stmt->block = head.next;
 
+  int i = scope.count - 1;
+  for (; i > 0; --i) {
+    if (scope.locals[i]->scope < scope.depth) break;
+  }
+  scope.count = i + 1;
+  --scope.depth;
+
   return stmt;
 }
 
@@ -156,7 +198,7 @@ struct stmt* parse_stmt(void) {
     struct stmt* stmt = alloc(sizeof (struct stmt));
     stmt->kind = STMT_LET;
 
-    stmt->let.var = consume(TK_IDENT, "expected an identifier").str;
+    stmt->let.var = new_var(consume(TK_IDENT, "expected an identifier"));
     consume(TK_ASSIGN, "expected '='");
 
     stmt->let.value = parse_expr();
@@ -230,25 +272,30 @@ struct stmt* parse_stmt(void) {
 struct fn* parse_fn(void) {
   consume(TK_FN, "expected a function");
 
-  struct fn* fn = alloc(sizeof (struct fn));
-  fn->name = current.str;
+  current_fn = alloc(sizeof (struct fn));
+  current_fn->name = current.str;
+
+  current_fn->locals = alloc(sizeof (struct var) * MAX_LOCALS);
+  scope.count = 0;
+  scope.depth = 0;
 
   consume(TK_IDENT, "expected an identifier");
   consume(TK_LPAREN, "expected '('");
-
   if (current.kind != TK_RPAREN) {
-    fn->args[0] = consume(TK_IDENT, "expected an identifier").str;
-    for (int i = 1; i < 6 && current.kind != TK_RPAREN; ++i) {
+    new_var(consume(TK_IDENT, "expected an identifier"));
+    current_fn->args_count = 1;
+    while (current_fn->args_count < MAX_ARGS && current.kind != TK_RPAREN) {
       consume(TK_COMMA, "expected ')' or ','");
-      fn->args[i] = consume(TK_IDENT, "expected an identifier").str;
+      new_var(consume(TK_IDENT, "expected an identifier"));
+      ++current_fn->args_count;
     }
   }
   consume(TK_RPAREN, "expected ')'");
 
   consume(TK_LBRACE, "expected '{'");
-  fn->body = block_stmt();
+  current_fn->body = block_stmt();
 
-  return fn;
+  return current_fn;
 }
 
 struct fn* parse(void) {

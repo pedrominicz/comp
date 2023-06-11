@@ -9,3 +9,5 @@ https://github.com/rui314/chibicc
 [C's Biggest Mistake](https://digitalmars.com/articles/C-biggest-mistake.html)
 
 https://harelang.org/specification.pdf
+
+https://craftinginterpreters.com/local-variables.html

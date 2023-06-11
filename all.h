@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_LOCALS  100
+#define MAX_ARGS    6
+
 #define impossible() die(0, "%s:%d: impossible", __FILE__, __LINE__)
 
 void die(int line, char* fmt, ...);
@@ -55,6 +58,14 @@ struct token {
 void lex_init(char* source);
 struct token lex(void);
 
+struct var {
+  char* name;
+  union {
+    int scope;  // used during parsing
+    int offset; // used during code generation
+  };
+};
+
 enum {
   EXPR_VAR,
   EXPR_NUM,
@@ -69,7 +80,7 @@ struct expr {
   int kind;
   struct type* type;
   union {
-    char* var; // EXPR_VAR
+    struct var* var;
     int value; // EXPR_NUM
     struct { // unary and binary expressions
       struct expr* lhs;
@@ -77,7 +88,7 @@ struct expr {
     } op;
     struct {
       char* fn;
-      struct expr* args[6];
+      struct expr* args[MAX_ARGS];
     } call;
   };
 };
@@ -97,7 +108,7 @@ struct stmt {
   struct stmt* next;
   union {
     struct {
-      char* var;
+      struct var* var;
       struct expr* value;
     } let;
     struct {
@@ -122,7 +133,9 @@ struct stmt {
 struct fn {
   struct fn* next;
   char* name;
-  char* args[6];
+  struct var** locals;
+  int locals_count;
+  int args_count;
   struct stmt* body;
 };
 
