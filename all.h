@@ -10,6 +10,11 @@
 
 #define impossible() die(0, "%s:%d: impossible", __FILE__, __LINE__)
 
+struct type;
+struct var;
+struct expr;
+struct stmt;
+
 void die(int line, char* fmt, ...);
 void* alloc(int size);
 
@@ -60,6 +65,7 @@ struct token lex(void);
 
 struct var {
   char* name;
+  struct type* type;
   union {
     int scope;  // used during parsing
     int offset; // used during code generation
@@ -150,14 +156,19 @@ struct fn* parse(void);
 // type
 
 enum {
-  TY_NUM,
+  TY_INT,
+  TY_PTR,
 };
 
 struct type {
   int kind;
+  union {
+    struct type* ptr;
+  };
 };
 
-void infer_expr(struct expr* expr);
+void check_type(struct expr* expr, int kind);
+void infer_type(struct expr* expr);
 
 // gen
 

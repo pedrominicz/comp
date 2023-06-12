@@ -202,8 +202,10 @@ struct stmt* parse_stmt(void) {
     consume(TK_ASSIGN, "expected '='");
 
     stmt->let.value = parse_expr(); // can use a previous definition of `name`
+    infer_type(stmt->let.value);
     consume(TK_SEMICOLON, "expected ';'");
     stmt->let.var = new_var(name);  // shadow previous definition
+    stmt->let.var->type = stmt->let.value->type;
 
     return stmt;
   }
@@ -213,6 +215,7 @@ struct stmt* parse_stmt(void) {
     stmt->kind = STMT_RETURN;
 
     stmt->return_ = parse_expr();
+    check_type(stmt->return_, TY_INT);
     consume(TK_SEMICOLON, "expected ';'");
 
     return stmt;
@@ -226,6 +229,7 @@ struct stmt* parse_stmt(void) {
 
     consume(TK_LPAREN, "expected '('");
     stmt->if_.cond = parse_expr();
+    check_type(stmt->if_.cond, TY_INT);
     consume(TK_RPAREN, "expected ')'");
 
     stmt->if_.then = parse_stmt();
@@ -240,6 +244,7 @@ struct stmt* parse_stmt(void) {
 
     consume(TK_LPAREN, "expected '('");
     stmt->while_.cond = parse_expr();
+    check_type(stmt->while_.cond, TY_INT);
     consume(TK_RPAREN, "expected ')'");
 
     stmt->while_.loop = parse_stmt();
@@ -248,6 +253,7 @@ struct stmt* parse_stmt(void) {
   }
 
   struct expr* expr = parse_expr();
+  infer_type(expr);
 
   if (match(TK_ASSIGN)) {
     struct stmt* stmt = alloc(sizeof (struct stmt));
@@ -256,6 +262,7 @@ struct stmt* parse_stmt(void) {
     stmt->assign.place = expr;
 
     stmt->assign.value = parse_expr();
+    infer_type(stmt->assign.value);
     consume(TK_SEMICOLON, "expected ';'");
 
     return stmt;
