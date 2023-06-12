@@ -62,28 +62,19 @@ static struct var* new_var(struct token tk) {
   return var;
 }
 
-static struct expr* new_binary(int kind, struct expr* lhs, struct expr* rhs) {
-  struct expr* expr = alloc(sizeof (struct expr));
-  expr->kind = kind;
-  expr->op.lhs = lhs;
-  expr->op.rhs = rhs;
-  return expr;
+static struct expr* new_binary(int kind, struct expr* e1, struct expr* e2) {
+  struct expr* e = alloc(sizeof (struct expr));
+  e->kind = kind;
+  e->op.l = e1;
+  e->op.r = e2;
+  return e;
 }
 
-
-static struct expr* new_unary(int kind, struct expr* lhs) {
-  return new_binary(kind, lhs, NULL);
+static struct expr* new_unary(int kind, struct expr* e) {
+  return new_binary(kind, e, NULL);
 }
 
 static struct expr* simple_expr(void) {
-  if (current.kind == TK_NUM) {
-    struct expr* expr = alloc(sizeof (struct expr));
-    expr->kind = EXPR_NUM;
-    expr->value = strtoul(current.str, NULL, 10);
-    next();
-    return expr;
-  }
-
   if (current.kind == TK_IDENT && lookahead.kind == TK_LPAREN) {
     struct expr* expr = alloc(sizeof (struct expr));
     expr->kind = EXPR_CALL;
@@ -116,6 +107,29 @@ static struct expr* simple_expr(void) {
     struct expr* expr = parse_expr();
     consume(TK_RPAREN, "expected ')'");
     return expr;
+  }
+
+  struct expr* e = alloc(sizeof (struct expr));
+  e->kind = EXPR_VALUE;
+  e->value = alloc(sizeof (struct value));
+
+  if (current.kind == TK_NUM) {
+    e->value->kind = VAL_INT;
+    e->value->int_ = strtoul(current.str, NULL, 10);
+    next();
+    return e;
+  }
+
+  if (match(TK_TRUE)) {
+    e->value->kind = VAL_BOOL;
+    e->value->bool_ = true;
+    return e;
+  }
+
+  if (match(TK_FALSE)) {
+    e->value->kind = VAL_BOOL;
+    e->value->bool_ = false;
+    return e;
   }
 
   die(current.line, "expected an expression");
@@ -195,89 +209,90 @@ static struct stmt* block_stmt(void) {
 
 struct stmt* parse_stmt(void) {
   if (match(TK_LET)) {
-    struct stmt* stmt = alloc(sizeof (struct stmt));
-    stmt->kind = STMT_LET;
+    struct stmt* s = alloc(sizeof (struct stmt));
+    s->kind = STMT_LET;
 
     struct token name = consume(TK_IDENT, "expected an identifier");
     consume(TK_ASSIGN, "expected '='");
 
-    stmt->let.value = parse_expr(); // can use a previous definition of `name`
-    infer(stmt->let.value);
+    s->let.value = parse_expr(); // can use a previous definition of `name`
+    infer(s->let.value);
     consume(TK_SEMICOLON, "expected ';'");
-    stmt->let.var = new_var(name);  // shadow previous definition
-    stmt->let.var->type = stmt->let.value->type;
+    s->let.var = new_var(name);  // shadow previous definition
+    s->let.var->type = s->let.value->type;
 
-    return stmt;
+    return s;
   }
 
   if (match(TK_RETURN)) {
-    struct stmt* stmt = alloc(sizeof (struct stmt));
-    stmt->kind = STMT_RETURN;
+    struct stmt* s = alloc(sizeof (struct stmt));
+    s->kind = STMT_RETURN;
 
-    stmt->return_ = parse_expr();
-    check(stmt->return_, int_);
+    s->return_ = parse_expr();
+    check(s->return_, int_);
     consume(TK_SEMICOLON, "expected ';'");
 
-    return stmt;
+    return s;
   }
 
   if (match(TK_LBRACE)) return block_stmt();
 
   if (match(TK_IF)) {
-    struct stmt* stmt = alloc(sizeof (struct stmt));
-    stmt->kind = STMT_IF;
+    struct stmt* s = alloc(sizeof (struct stmt));
+    s->kind = STMT_IF;
 
-    consume(TK_LPAREN, "expected '('");
-    stmt->if_.cond = parse_expr();
-    check(stmt->if_.cond, int_);
-    consume(TK_RPAREN, "expected ')'");
+    s->if_.cond = parse_expr();
+    check(s->if_.cond, bool_);
 
-    stmt->if_.then = parse_stmt();
-    if (match(TK_ELSE)) stmt->if_.else_ = parse_stmt();
+    consume(TK_LBRACE, "expected '{'");
+    s->if_.then = block_stmt();
+    if (match(TK_ELSE)) {
+      consume(TK_LBRACE, "expected '{'");
+      s->if_.else_ = block_stmt();
+    }
 
-    return stmt;
+    return s;
   }
 
   if (match(TK_WHILE)) {
-    struct stmt* stmt = alloc(sizeof (struct stmt));
-    stmt->kind = STMT_WHILE;
+    struct stmt* s = alloc(sizeof (struct stmt));
+    s->kind = STMT_WHILE;
 
-    consume(TK_LPAREN, "expected '('");
-    stmt->while_.cond = parse_expr();
-    check(stmt->while_.cond, int_);
-    consume(TK_RPAREN, "expected ')'");
+    s->while_.cond = parse_expr();
+    check(s->while_.cond, bool_);
 
-    stmt->while_.loop = parse_stmt();
+    consume(TK_LBRACE, "expected '{'");
+    s->while_.loop = block_stmt();
 
-    return stmt;
+    return s;
   }
 
   struct expr* expr = parse_expr();
   infer(expr);
 
   if (match(TK_ASSIGN)) {
-    struct stmt* stmt = alloc(sizeof (struct stmt));
-    stmt->kind = STMT_ASSIGN;
+    struct stmt* s = alloc(sizeof (struct stmt));
+    s->kind = STMT_ASSIGN;
 
     if (expr->kind != EXPR_VAR && expr->kind != EXPR_DEREF) {
       die(current.line, "cannot assign to expresion");
     }
-    stmt->assign.place = expr;
+    s->assign.place = expr;
 
-    stmt->assign.value = parse_expr();
-    check(stmt->assign.value, stmt->assign.place->type);
+    s->assign.value = parse_expr();
+    check(s->assign.value, s->assign.place->type);
     consume(TK_SEMICOLON, "expected ';'");
 
-    return stmt;
+    return s;
   }
 
-  struct stmt* stmt = alloc(sizeof (struct stmt));
-  stmt->kind = STMT_EXPR;
+  struct stmt* s = alloc(sizeof (struct stmt));
+  s->kind = STMT_EXPR;
 
-  stmt->expr = expr;
+  s->expr = expr;
   consume(TK_SEMICOLON, "expected ';'");
 
-  return stmt;
+  return s;
 }
 
 struct fn* parse_fn(void) {

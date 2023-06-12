@@ -38,10 +38,29 @@ void print_token(struct token tk) {
   fprintf(stderr, "%s\t%d\t%s\n", tk.str, tk.line, name[tk.kind]);
 }
 
-void print_expr(struct expr* expr) {
-  switch (expr->kind) {
-    case EXPR_VAR: fputs(expr->var->name, stderr); return;
-    case EXPR_NUM: fprintf(stderr, "%d", expr->value); return;
+void print_type(struct type* t) {
+  switch (t->kind) {
+    case TY_INT: fputs("int", stderr); return;
+    case TY_BOOL: fputs("bool", stderr); return;
+    case TY_PTR: fputc('*', stderr); print_type(t->ptr); return;
+  }
+
+  impossible();
+}
+
+void print_value(struct value* v) {
+  switch (v->kind) {
+    case VAL_INT: fprintf(stderr, "%d", v->int_); return;
+    case VAL_BOOL: fputs(v->bool_ ? "true" : "false", stderr); return;
+  }
+
+  impossible();
+}
+
+void print_expr(struct expr* e) {
+  switch (e->kind) {
+    case EXPR_VAR: fputs(e->var->name, stderr); return;
+    case EXPR_VALUE: print_value(e->value); return;
     // binary expressions
     case EXPR_ADD: case EXPR_SUB:
     case EXPR_MUL: case EXPR_DIV:
@@ -55,9 +74,9 @@ void print_expr(struct expr* expr) {
         [EXPR_LE]   = "<=",
       };
       fputc('(', stderr);
-      print_expr(expr->op.lhs);
-      fprintf(stderr, " %s ", op[expr->kind]);
-      print_expr(expr->op.rhs);
+      print_expr(e->op.l);
+      fprintf(stderr, " %s ", op[e->kind]);
+      print_expr(e->op.r);
       fputc(')', stderr);
       return;
     }
@@ -69,18 +88,18 @@ void print_expr(struct expr* expr) {
         [EXPR_REF]    = "&",
         [EXPR_DEREF]  = "*",
       };
-      fprintf(stderr, "(%s", op[expr->kind]);
-      print_expr(expr->op.lhs);
+      fprintf(stderr, "(%s", op[e->kind]);
+      print_expr(e->op.l);
       fputc(')', stderr);
       return;
     }
     case EXPR_CALL:
-      fprintf(stderr, "%s(", expr->call.fn);
-      if (expr->call.args[0]) {
-        print_expr(expr->call.args[0]);
-        for (int i = 1; i < MAX_ARGS && expr->call.args[i]; ++i) {
+      fprintf(stderr, "%s(", e->call.fn);
+      if (e->call.args[0]) {
+        print_expr(e->call.args[0]);
+        for (int i = 1; i < MAX_ARGS && e->call.args[i]; ++i) {
           fputs(", ", stderr);
-          print_expr(expr->call.args[i]);
+          print_expr(e->call.args[i]);
         }
       }
       fputc(')', stderr);

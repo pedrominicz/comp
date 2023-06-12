@@ -24,6 +24,8 @@ enum {
   TK_EOF,
   TK_IDENT,
   TK_NUM,
+  TK_TRUE,
+  TK_FALSE,
   TK_LPAREN,
   TK_RPAREN,
   TK_ADD,
@@ -73,8 +75,22 @@ struct var {
 };
 
 enum {
+  VAL_INT,
+  VAL_BOOL,
+};
+
+struct value {
+  int kind;
+  struct type* type;
+  union {
+    int int_;
+    bool bool_;
+  };
+};
+
+enum {
   EXPR_VAR,
-  EXPR_NUM,
+  EXPR_VALUE,
   // binary expressions
   EXPR_ADD, EXPR_SUB, EXPR_MUL, EXPR_DIV, EXPR_EQ, EXPR_LE,
   // unary expressions
@@ -87,11 +103,8 @@ struct expr {
   struct type* type;
   union {
     struct var* var;
-    int value; // EXPR_NUM
-    struct { // unary and binary expressions
-      struct expr* lhs;
-      struct expr* rhs;
-    } op;
+    struct value* value;
+    struct { struct expr *l, *r; } op; // unary and binary expressions
     struct {
       char* fn;
       struct expr* args[MAX_ARGS];
@@ -157,6 +170,7 @@ struct fn* parse(void);
 
 enum {
   TY_INT,
+  TY_BOOL,
   TY_PTR,
 };
 
@@ -168,6 +182,7 @@ struct type {
 };
 
 extern struct type* int_;
+extern struct type* bool_;
 
 void check(struct expr* expr, struct type* type);
 void infer(struct expr* expr);
@@ -179,6 +194,8 @@ void gen(struct fn* prog);
 // print
 
 void print_token(struct token tk);
-void print_expr(struct expr* expr);
+void print_type(struct type* t);
+void print_value(struct value* v);
+void print_expr(struct expr* e);
 void print_stmt(struct stmt* stmt);
 void print_fn(struct fn* fn);

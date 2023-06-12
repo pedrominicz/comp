@@ -20,43 +20,61 @@ static void gen_addr(struct expr* expr) {
   }
 
   if (expr->kind == EXPR_DEREF) {
-    gen_expr(expr->op.lhs);
+    gen_expr(expr->op.l);
     return;
   }
 
   impossible();
 }
 
-static void gen_expr(struct expr* expr) {
-  switch (expr->kind) {
+static void gen_value(struct value* v) {
+  switch (v->kind) {
+    case VAL_INT:
+      printf("  mov $%d, %%rax\n", v->int_);
+      return;
+    case VAL_BOOL:
+      if (v->bool_) {
+        puts("  mov $1, %al");
+        puts("  movzx %al, %eax");
+      } else {
+        puts("  xor %rax, %rax");
+      }
+      return;
+  }
+
+  impossible();
+}
+
+static void gen_expr(struct expr* e) {
+  switch (e->kind) {
     case EXPR_VAR:
-      gen_addr(expr);
+      gen_addr(e);
       puts("  mov (%rax), %rax");
       return;
-    case EXPR_NUM:
-      printf("  mov $%d, %%rax\n", expr->value);
+    case EXPR_VALUE:
+      gen_value(e->value);
       return;
     case EXPR_NEG:
-      gen_expr(expr->op.lhs);
+      gen_expr(e->op.l);
       puts("neg %rax");
       return;
     case EXPR_NOT:
-      gen_expr(expr->op.lhs);
+      gen_expr(e->op.l);
       puts("  test %rax, %rax");
       puts("  setz %al");
-      puts("  movzx %al, %rax");
+      puts("  movzx %al, %eax");
       return;
     case EXPR_REF:
-      gen_addr(expr->op.lhs);
+      gen_addr(e->op.l);
       return;
     case EXPR_DEREF:
-      gen_expr(expr->op.lhs);
+      gen_expr(e->op.l);
       puts("  mov (%rax), %rax");
       return;
     case EXPR_CALL: {
       int args = 0;
-      while (args < MAX_ARGS && expr->call.args[args]) {
-        gen_expr(expr->call.args[args]);
+      while (args < MAX_ARGS && e->call.args[args]) {
+        gen_expr(e->call.args[args]);
         puts("  push %rax");
         ++args;
       }
@@ -66,17 +84,17 @@ static void gen_expr(struct expr* expr) {
       }
 
       puts("  xor %rax, %rax");
-      printf("  call %s\n", expr->call.fn);
+      printf("  call %s\n", e->call.fn);
       return;
     }
   }
 
-  gen_expr(expr->op.rhs);
+  gen_expr(e->op.r);
   puts("  push %rax");
-  gen_expr(expr->op.lhs);
+  gen_expr(e->op.l);
   puts("  pop %rdi");
 
-  switch (expr->kind) {
+  switch (e->kind) {
     case EXPR_ADD:
       puts("  add %rdi, %rax");
       return;
@@ -93,12 +111,12 @@ static void gen_expr(struct expr* expr) {
     case EXPR_EQ:
       puts("  cmp %rdi, %rax");
       puts("  sete %al");
-      puts("  movzx %al, %rax");
+      puts("  movzx %al, %eax");
       return;
     case EXPR_LE:
       puts("  cmp %rdi, %rax");
       puts("  setle %al");
-      puts("  movzx %al, %rax");
+      puts("  movzx %al, %eax");
       return;
   }
 

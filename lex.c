@@ -47,6 +47,8 @@ struct token lex(void) {
     if (!strcmp("while",  tk.str)) tk.kind = TK_WHILE;
     if (!strcmp("let",    tk.str)) tk.kind = TK_LET;
     if (!strcmp("fn",     tk.str)) tk.kind = TK_FN;
+    if (!strcmp("true",   tk.str)) tk.kind = TK_TRUE;
+    if (!strcmp("false",  tk.str)) tk.kind = TK_FALSE;
 
     return tk;
   }
