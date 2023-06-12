@@ -1,16 +1,24 @@
 #include "all.h"
 
-static struct type* int_ = &(struct type){ TY_INT, {0} };
+struct type* int_ = &(struct type){ TY_INT, {0} };
 
-void check_type(struct expr* expr, int kind) {
-  infer_type(expr);
+static void eq(struct type* t1, struct type* t2) {
+  if (t1->kind != t2->kind) die(-1, "invalid type");
 
-  if (expr->type->kind != kind) {
-    die(-1, "invalid type");
+  switch (t1->kind) {
+    case TY_INT: return;
+    case TY_PTR: eq(t1->ptr, t2->ptr); return;
   }
+
+  impossible();
 }
 
-void infer_type(struct expr* expr) {
+void check(struct expr* e, struct type* t) {
+  infer(e);
+  eq(e->type, t);
+}
+
+void infer(struct expr* expr) {
   if (expr->type) return;
 
   switch (expr->kind) {
@@ -26,27 +34,33 @@ void infer_type(struct expr* expr) {
     case EXPR_ADD: case EXPR_SUB:
     case EXPR_MUL: case EXPR_DIV:
     case EXPR_EQ: case EXPR_LE:
-      check_type(expr->op.lhs, TY_INT);
-      check_type(expr->op.rhs, TY_INT);
+      check(expr->op.lhs, int_);
+      check(expr->op.rhs, int_);
       expr->type = int_;
       return;
     case EXPR_NEG: case EXPR_NOT:
-      check_type(expr->op.lhs, TY_INT);
+      check(expr->op.lhs, int_);
       expr->type = int_;
       return;
     case EXPR_REF:
-      infer_type(expr->op.lhs);
+      if (expr->op.lhs->kind != EXPR_VAR) {
+        die(-1, "cannot reference expression");
+      }
+      infer(expr->op.lhs);
       expr->type = alloc(sizeof (struct type));
       expr->type->kind = TY_PTR;
       expr->type->ptr = expr->op.lhs->type;
       return;
     case EXPR_DEREF:
-      check_type(expr->op.lhs, TY_PTR);
+      infer(expr->op.lhs);
+      if (expr->op.lhs->type->kind != TY_PTR) {
+        die(-1, "invalid pointer dereference");
+      }
       expr->type = expr->op.lhs->type->ptr;
       return;
     case EXPR_CALL:
       for (int i = 0; i < MAX_ARGS && expr->call.args[i]; ++i) {
-        check_type(expr->call.args[i], TY_INT);
+        check(expr->call.args[i], int_);
       }
       expr->type = int_;
       return;
@@ -54,4 +68,3 @@ void infer_type(struct expr* expr) {
 
   impossible();
 }
-

@@ -24,7 +24,7 @@ static void gen_addr(struct expr* expr) {
     return;
   }
 
-  die(-1, "left-hand side of an assignment expression must be a variable");
+  impossible();
 }
 
 static void gen_expr(struct expr* expr) {

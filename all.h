@@ -167,8 +167,10 @@ struct type {
   };
 };
 
-void check_type(struct expr* expr, int kind);
-void infer_type(struct expr* expr);
+extern struct type* int_;
+
+void check(struct expr* expr, struct type* type);
+void infer(struct expr* expr);
 
 // gen
 
